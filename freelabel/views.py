@@ -28,6 +28,9 @@ import scipy.io as sio
 
 import datetime, math
 
+import time
+
+
 # used to return numpy arrays via AJAX to JS side
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -522,6 +525,16 @@ def initanns2(request, username):
     #    return HttpResponse(json.dumps({'bbList': bbList}), content_type="application/json")            
 
 
+def refine_test(request):
+    #img = open('/home/josef/anntools/freelabel/static/dummy1/refinedannot_compare--3.png', 'rb')
+    img = open('static/dummy1/refinedannot_compare--3.png', 'rb')
+
+    response = HttpResponse(img, content_type="image/png")
+    #response = FileResponse(img)
+
+    return response
+
+
 def refine3(request):
     #img = open('/home/josef/anntools/freelabel/static/dummy1/refinedannot_compare--3.png', 'rb')
     img = open('static/dummy1/refinedannot_compare--3.png', 'rb')
@@ -531,8 +544,11 @@ def refine3(request):
 
     return response
 
+
 def refine2(request):
     try:
+        ts0 = time.time()
+    
         username = 'dummy1'
 
         userAnns = initanns2(request, username)
@@ -540,11 +556,16 @@ def refine2(request):
         #jsonAnns = json.loads(request.session['userAnns'])
         # convert it to numpy
         #userAnns = np.array(jsonAnns["userAnns"])
+        #print(1)
+        #print(time.time() - ts0)
 
         # get coordinates of trace to be drawn
         traces = request.POST.getlist('trace[]')   
 
         userAnns = drawTrace(userAnns,traces)
+        #print(userAnns.shape)  
+        #print(2)
+        #print(time.time() - ts0)
 
         #username = request.user.username
         
@@ -566,12 +587,23 @@ def refine2(request):
 
         # open image URL
         resp = ur.urlopen(url)
+        #print(3)
+        #print(time.time() - ts0)        
         # download image and convert to numpy array
-        img = np.asarray(bytearray(resp.read()), dtype="uint8")    
+        #resp2 = resp
+        #ar_img = bytearray(resp2.read())
+        #print(len(ar_img))
+        img = np.asarray(bytearray(resp.read()), dtype="uint8")  
+        #print(img.shape)  
+        #print(img)
         #print(1)
+        #print(4)
+        #print(time.time() - ts0)        
         
         # call RGR and get mask as return 
-        im_color = startRGR(username,img,userAnns,ID,weight_,m)   
+        im_color = startRGR(username,img,userAnns,ID,weight_,m)  
+        #print(5)
+        #print(time.time() - ts0)        
         #print(2)
         #request.session['userAnns'] = json.dumps({'userAnns': userAnns}, cls=NumpyEncoder)
         
@@ -590,6 +622,8 @@ def refine2(request):
         # return image
         #return FileResponse(image_data)
         response = HttpResponse(image_data, content_type="image/png")
+        #print(6)
+        #print(time.time() - ts0)
         #response["Access-Control-Allow-Origin"] = "*"
         return response
         #return HttpResponse(image_data, mimetype="image/png")

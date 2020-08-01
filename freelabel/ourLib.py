@@ -21,6 +21,9 @@ import multiprocessing
 
 import pickle
 
+import time
+import copy
+
 #####
 
 def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet):
@@ -76,132 +79,255 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
     return_dict[itSet] = clsScores
 ########
 def main(username,img,anns,weight_,m):
-    # get image size, basically height and width
-    height, width, channels = img.shape
-    heightAnns, widthAnns = anns.shape
+    try:
+        print("p8")    
+        debug = False
+        single_process = False
+        num_sets = 8
+        
+        ts0 = time.time()
+        if debug:
+            print(time.time() - ts0)
+        
+        # get image size, basically height and width
+        height, width, channels = img.shape
+        heightAnns, widthAnns = anns.shape
 
-    if(widthAnns != width):
-        img = cv.resize(img, (widthAnns, heightAnns)) 
+        if(widthAnns != width):
+            img = cv.resize(img, (widthAnns, heightAnns)) 
 
-    height, width, channels = img.shape
+        height, width, channels = img.shape
 
-    # flattening (i.e. vectorizing) matrices to pass it to C++ function (** OPENCV LOADS BGR RATHER THAN RGB!)
-    img_b = img[:,:,0].flatten() # R channel
-    img_g = img[:,:,1].flatten() # G channel
-    img_r = img[:,:,2].flatten() # B channel
+        # flattening (i.e. vectorizing) matrices to pass it to C++ function (** OPENCV LOADS BGR RATHER THAN RGB!)
+        img_b = img[:,:,0].flatten() # R channel
+        img_g = img[:,:,1].flatten() # G channel
+        img_r = img[:,:,2].flatten() # B channel
+        #print(img_b.shape)
 
-    img_b = img_b.astype(np.int32)
-    img_g = img_g.astype(np.int32)
-    img_r = img_r.astype(np.int32)
+        img_b = img_b.astype(np.int32)
+        img_g = img_g.astype(np.int32)
+        img_r = img_r.astype(np.int32)
 
-    # image size 
-    sz = width*height
+        # image size 
+        sz = width*height
 
-    # load PASCAL colormap in CV format
-    lut = np.load('static/images/PASCALlutW.npy')
+        # load PASCAL colormap in CV format
+        lut = np.load('static/images/PASCALlutW.npy')
+        #lutnow = np.load('static/images/PASCALlut.npy')
+        #print(lutnow.shape)
+        #print(lutnow)
+        
+        ts1 = time.time()
+        if debug:    
+            print(ts1 - ts0)
 
-    ## RGR parameters
-    # fixed parameters
-    # m = .1  # theta_m: balance between
-    numSets = 8    # number of seeds sets (samplings)
-    # cellSize = 10-int(weight_)   # average spacing between samples
-    cellSize = 1.333   # average spacing between samples
+        ## RGR parameters
+        # fixed parameters
+        # m = .1  # theta_m: balance between
+        numSets = num_sets    # number of seeds sets (samplings)
+        # cellSize = 10-int(weight_)   # average spacing between samples
+        cellSize = 1.333   # average spacing between samples
 
-    # Rectangular Kernel - equal to strel in matlab
-    SE = cv.getStructuringElement(cv.MORPH_RECT, (80, 80))  # used for identifying far background
+        # Rectangular Kernel - equal to strel in matlab
+        SE = cv.getStructuringElement(cv.MORPH_RECT, (80, 80))  # used for identifying far background
 
-    # RGR - refine each class
-    # list of annotated classes
-    clsList = np.unique(anns)
-    clsList = np.delete(clsList,0) # remove class 0 
-    numCls = clsList.size # number of classes
+        # RGR - refine each class
+        # list of annotated classes
+        clsList = np.unique(anns)
+        clsList = np.delete(clsList,0) # remove class 0 
+        numCls = clsList.size # number of classes
+        
+        ts2 = time.time()
+        if debug:
+            print(ts2 - ts1)
 
-    # annotations masks per class
-    clsMap = np.zeros((height,width,numCls))
-    for itCls in range(0, numCls):
-        np.putmask(clsMap[:,:,itCls],anns == clsList[itCls],1) 
+        # annotations masks per class
+        clsMap = np.zeros((height,width,numCls))
+        for itCls in range(0, numCls):
+            np.putmask(clsMap[:,:,itCls],anns == clsList[itCls],1) 
 
-    # mask of annotated pixels: 
-    # in this case, only annotated traces are high-confidence (index 2),
-    # all others are uncertain (index 0)
-    preSeg = np.int32(np.zeros((height,width)))
-    np.putmask(preSeg,anns > 0,2)
-    RoI = preSeg
+        # mask of annotated pixels: 
+        # in this case, only annotated traces are high-confidence (index 2),
+        # all others are uncertain (index 0)
+        preSeg = np.int32(np.zeros((height,width)))
+        np.putmask(preSeg,anns > 0,2)
+        RoI = preSeg
 
-    # identify all high confidence pixels composing the RoI
-    area = np.count_nonzero(RoI)
+        # identify all high confidence pixels composing the RoI
+        area = np.count_nonzero(RoI)
 
-    # R_H is the high confidence region, the union of R_nB and R_F
-    R_H = np.nonzero(RoI.flatten('F') > 0)
-    R_H = R_H[0]
+        # R_H is the high confidence region, the union of R_nB and R_F
+        R_H = np.nonzero(RoI.flatten('F') > 0)
+        R_H = R_H[0]
 
-    # number of seeds to be sampled is defined by the ratio between
-    # |R_H| and desired spacing between seeds (cellSize)
-    # round up
-    numSamples = np.ceil(area / cellSize)
+        # number of seeds to be sampled is defined by the ratio between
+        # |R_H| and desired spacing between seeds (cellSize)
+        # round up
+        numSamples = np.ceil(area / cellSize)
 
-    preSeg = preSeg.flatten()
+        preSeg = preSeg.flatten()
 
-    # matrix that will contain the scoremaps for each iteration
-    # ref_cls = np.zeros((height, width, numCls, numSets),dtype=float)    
-    ref_cls = np.zeros((height*width*numCls, numSets),dtype=float)    
+        # matrix that will contain the scoremaps for each iteration
+        # ref_cls = np.zeros((height, width, numCls, numSets),dtype=float)    
+        ref_cls = np.zeros((height*width*numCls, numSets),dtype=float)    
+        
+        num_cores = multiprocessing.cpu_count()
+
+        if not(single_process):
+            manager = multiprocessing.Manager()
+            return_dict = manager.dict()
+        else:
+            return_dict = dict()
+
+        ts3 = time.time()
+        if debug:
+            print(ts3 - ts2)
+        
+        ###
+        if not(single_process):
+            jobs = []
+            for itSet in range(0, numSets):
+                p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet))
+                jobs.append(p)
+                p.start()
+        else:
+            for itSet in range(0, numSets):
+                regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet)
+
+        ts4 = time.time()
+        if True:
+            print(42)
+            print(ts4 - ts3)
+
+        if not(single_process):
+            for proc in jobs:
+                proc.join()
+
+        ts5 = time.time()
+        if True:
+            print(5)
+            print(ts5 - ts4)
+
+        #return_dict_copy = return_dict
+        #return_dict_copy = return_dict.copy()
+        #return_dict_copy = copy.deepcopy(return_dict)
+        ts6a = time.time()
+        if False:
+            print(61)
+            print(ts6a - ts5)
+
+        if not(single_process):
+            outputPar = return_dict.values()
+        else:
+            outputPar = list(return_dict.values())
+        #print(outputPar)
+        ts6 = time.time()
+        if True:
+            print(6)
+            print(ts6 - ts6a)
+
+        #outputPar = list(return_dict_copy.values())
+        #print(outputPar2)
+        ts6z = time.time()
+        if False:
+            print(699)
+            print(ts6z - ts6)
+
+        outputPar = np.asarray(outputPar)
+        ts7 = time.time()
+        if debug:
+            print(7)
+            print(ts7 - ts6)
+        
+        # swapping axes, because parallel returns (numSets,...)
+        ref_cls = np.moveaxis(outputPar,0,3)
+
+        ts8 = time.time()
+        if debug:
+            print(8)
+            print(ts8 - ts7)
+
+        # averaging scores obtained for each set of seeds
+        ref_M = (np.sum(ref_cls,axis=3))/numSets        
+
+        ts9 = time.time()
+        if debug:
+            print(9)
+            print(ts9 - ts8)
+
+        # maximum likelihood across refined classes scores ref_M
+        maxScores = np.amax(ref_M,axis=2)
+        maxClasses = np.argmax(ref_M,axis=2)
+
+        detMask = np.uint8(maxClasses+1)
+
+        finalMask = np.zeros((height,width),dtype=float);    
+        for itCls in range(0, numCls):       
+           np.putmask(finalMask,detMask == itCls+1,clsList[itCls]) 
+
+        finalMask = np.uint8(finalMask-1)
+        
+        ts10 = time.time()
+        if debug:
+            print(10)
+            print(ts10 - ts9)
+        
+        
+        ###
+
+        np.save('static/'+username+'/lastmask.npy', np.asarray(finalMask,dtype=float))
+        # sio.savemat('intermediate.mat', mdict={'anns':anns,'ref_M': ref_M,'ref_cls':ref_cls,'finalMaskRGR':finalMask})  
+        # apply colormap
+        _,alpha = cv.threshold(finalMask,0,255,cv.THRESH_BINARY)
+
+        finalMask = cv.cvtColor(np.uint8(finalMask), cv.COLOR_GRAY2RGB)    
+        im_color = cv.LUT(finalMask, lut)    
+
+        b, g, r = cv.split(im_color)
+        rgba = [b,g,r, alpha]
+        im_color = cv.merge(rgba,4) 
+        
+
+        return im_color
     
-    num_cores = multiprocessing.cpu_count()
-
-    manager = multiprocessing.Manager()
-    return_dict = manager.dict()
-
-    jobs = []
-    for itSet in range(0, numSets):
-        p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet))
-        jobs.append(p)
-        p.start()
-
-    for proc in jobs:
-        proc.join()
-
-    outputPar = return_dict.values()    
-
-    outputPar = np.asarray(outputPar)
-
-    # swapping axes, because parallel returns (numSets,...)
-    ref_cls = np.moveaxis(outputPar,0,3)
-
-    # averaging scores obtained for each set of seeds
-    ref_M = (np.sum(ref_cls,axis=3))/numSets        
-
-    # maximum likelihood across refined classes scores ref_M
-    maxScores = np.amax(ref_M,axis=2)
-    maxClasses = np.argmax(ref_M,axis=2)
-
-    detMask = np.uint8(maxClasses+1)
-
-    finalMask = np.zeros((height,width),dtype=float);    
-    for itCls in range(0, numCls):       
-       np.putmask(finalMask,detMask == itCls+1,clsList[itCls]) 
-
-    finalMask = np.uint8(finalMask-1)
-
-    np.save('static/'+username+'/lastmask.npy', np.asarray(finalMask,dtype=float))
-    # sio.savemat('intermediate.mat', mdict={'anns':anns,'ref_M': ref_M,'ref_cls':ref_cls,'finalMaskRGR':finalMask})  
-    # apply colormap
-    _,alpha = cv.threshold(finalMask,0,255,cv.THRESH_BINARY)
-
-    finalMask = cv.cvtColor(np.uint8(finalMask), cv.COLOR_GRAY2RGB)    
-    im_color = cv.LUT(finalMask, lut)    
-
-    b, g, r = cv.split(im_color)
-    rgba = [b,g,r, alpha]
-    im_color = cv.merge(rgba,4) 
-
-    return im_color
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        
+        height, width, channels = img.shape
+        
+        return np.zeros(height, width, channels+1)
+    
 
 def startRGR(username,imgnp,userAnns,cnt,weight_,m):
+    ts0 = time.time()
+    #print(time.time() - ts0)
 
     img = cv.imdecode(imgnp, cv.IMREAD_COLOR)
+    #print(type(img))
+    #print(img.shape)
+    #print(img)
+    
+    #print(time.time() - ts0)
+    ts1 = time.time()
+    
     im_color = main(username,img,userAnns,weight_,m)
+    #print(type(im_color))
+    #print(im_color.shape)
+    #print(im_color)
+    #for x in im_color:
+    #    for y in x:
+    #        if y[3] != 0:
+    #            print(y)
+    
+    #print(time.time() - ts1)
+    ts2 = time.time()
 
     cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
+    
+    #print(time.time() - ts2)
+    
 
 def traceLine(img,r0,c0,r1,c1,catId,thick):
     cv.line(img,(c0,r0),(c1,r1),catId,thick)
