@@ -36,6 +36,20 @@ The code may be used according to the license below.  If the results of the code
 1. clone repository
 2. cd freelabel-wacv/
 3. create virtual environment: virtualenv . (if you have multiple python versions, run: virtualenv -p python3 .)
+conda create -n freelabel anaconda
+python -m venv freelabel
+D:\Users\Jos\.virtualenv\freelabel\Scripts\activate.bat
+
+conda create --name fltest
+conda activate fltest
+
+ERROR: After October 2020 you may experience errors when installing or updating packages. This is because pip will change the way that it resolves dependency conflicts.
+
+We recommend you use --use-feature=2020-resolver to test your packages with the new resolver before it becomes the default.
+
+matplotlib 3.3.0 requires numpy>=1.15, but you'll have numpy 1.14.5 which is incompatible.
+
+
 4. enter virtual environment: source ./bin/activate
 5. install requirements: pip install -r requirements.txt (if it fails, try upgrading pip: pip install --upgrade pip)
 6. Recompile callRGR: 

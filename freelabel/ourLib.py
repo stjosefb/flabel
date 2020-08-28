@@ -78,12 +78,12 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
 
     return_dict[itSet] = clsScores
 ########
-def main(username,img,anns,weight_,m):
+def main(username,img,anns,weight_,m,num_sets=8):
     try:
-        print("p8")    
+        print("s1")    
         debug = False
-        single_process = False
-        num_sets = 8
+        single_process = True
+        num_sets = 1
         
         ts0 = time.time()
         if debug:
@@ -185,12 +185,14 @@ def main(username,img,anns,weight_,m):
         
         ###
         if not(single_process):
+            print('multiprocess')
             jobs = []
             for itSet in range(0, numSets):
                 p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet))
                 jobs.append(p)
                 p.start()
         else:
+            print('singleprocess')
             for itSet in range(0, numSets):
                 regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet)
 
@@ -300,7 +302,7 @@ def main(username,img,anns,weight_,m):
         return np.zeros(height, width, channels+1)
     
 
-def startRGR(username,imgnp,userAnns,cnt,weight_,m):
+def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8):
     ts0 = time.time()
     #print(time.time() - ts0)
 
@@ -312,7 +314,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m):
     #print(time.time() - ts0)
     ts1 = time.time()
     
-    im_color = main(username,img,userAnns,weight_,m)
+    im_color = main(username,img,userAnns,weight_,m,num_sets)
     #print(type(im_color))
     #print(im_color.shape)
     #print(im_color)
@@ -327,6 +329,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m):
     cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
     
     #print(time.time() - ts2)
+    return ts2-ts1
     
 
 def traceLine(img,r0,c0,r1,c1,catId,thick):

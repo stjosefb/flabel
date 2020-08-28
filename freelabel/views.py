@@ -5,7 +5,7 @@ from django.shortcuts import render
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.http import HttpResponseRedirect, HttpResponse, FileResponse
+from django.http import HttpResponseRedirect, HttpResponse, FileResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 
 from django.shortcuts import render_to_response
@@ -576,6 +576,9 @@ def refine2(request):
         ID = request.POST.get('ID')
         # weight of traces, which defines the spacing between samples in RGR
         weight_ = int(request.POST.get('weight'))
+        
+        num_sets = int(request.POST.get('num_sets',8))
+        is_base64 = request.POST.get('base64',0) == '1'
 
         # theta_m: regulates weight of color-similarity vs spatial-proximity
         # divide by to adjust from [1,10] to [.1,1] 
@@ -600,8 +603,11 @@ def refine2(request):
         #print(4)
         #print(time.time() - ts0)        
         
-        # call RGR and get mask as return 
-        im_color = startRGR(username,img,userAnns,ID,weight_,m)  
+        # call RGR and get mask as return
+        time_0 = time.time()       
+        #im_color = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
+        time_diff = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
+        time_1 = time.time()
         #print(5)
         #print(time.time() - ts0)        
         #print(2)
@@ -625,6 +631,12 @@ def refine2(request):
         #print(6)
         #print(time.time() - ts0)
         #response["Access-Control-Allow-Origin"] = "*"
+        if is_base64:
+            json_data = {
+                #'time': time_1-time_0,
+                'time': time_diff
+            }
+            response = JsonResponse(json_data)
         return response
         #return HttpResponse(image_data, mimetype="image/png")
         
