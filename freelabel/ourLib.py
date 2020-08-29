@@ -80,10 +80,10 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
 ########
 def main(username,img,anns,weight_,m,num_sets=8):
     try:
-        print("s1")    
+        print("p1")    
         debug = False
-        single_process = True
-        num_sets = 1
+        single_process = False
+        num_sets = 8
         
         ts0 = time.time()
         if debug:

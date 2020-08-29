@@ -29,6 +29,7 @@ import scipy.io as sio
 import datetime, math
 
 import time
+import base64
 
 
 # used to return numpy arrays via AJAX to JS side
@@ -616,27 +617,33 @@ def refine2(request):
         # image path
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         
-        # open image
-        #image_data = open(img_path, "rb").read()
-        image_data = open(img_path, "rb")
-        #print(3)
-        
-        # del image
-        #os.remove(img_path)
-        #print(4)    
-
-        # return image
-        #return FileResponse(image_data)
-        response = HttpResponse(image_data, content_type="image/png")
-        #print(6)
-        #print(time.time() - ts0)
-        #response["Access-Control-Allow-Origin"] = "*"
         if is_base64:
+            with open(img_path, "rb") as img_file:
+                my_string = base64.b64encode(img_file.read())  
+            #print(my_string)
             json_data = {
                 #'time': time_1-time_0,
-                'time': time_diff
+                'time': time_diff,
+                'imgbase64': 'data:image/png;base64,' + my_string.decode('utf-8') 
             }
             response = JsonResponse(json_data)
+        else:
+            # open image
+            #image_data = open(img_path, "rb").read()
+            image_data = open(img_path, "rb")
+            #print(3)
+            
+            # del image
+            #os.remove(img_path)
+            #print(4)    
+
+            # return image
+            #return FileResponse(image_data)
+            response = HttpResponse(image_data, content_type="image/png")
+            #print(6)
+            #print(time.time() - ts0)
+            #response["Access-Control-Allow-Origin"] = "*"
+        
         return response
         #return HttpResponse(image_data, mimetype="image/png")
         
