@@ -37,6 +37,7 @@ The code may be used according to the license below.  If the results of the code
 2. cd freelabel-wacv/
 3. create virtual environment: virtualenv . (if you have multiple python versions, run: virtualenv -p python3 .)
 conda create -n freelabel anaconda
+cd D:\Users\Jos\.virtualenv
 python -m venv freelabel
 D:\Users\Jos\.virtualenv\freelabel\Scripts\activate.bat
 

@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect, HttpResponse, FileResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 
-from django.shortcuts import render_to_response
+#from django.shortcuts import render_to_response
 
 # Import the Category model
 from freelabel.models import Category, Page
@@ -30,6 +30,7 @@ import datetime, math
 
 import time
 import base64
+import cv2 as cv
 
 
 # used to return numpy arrays via AJAX to JS side
@@ -564,6 +565,18 @@ def refine2(request):
         traces = request.POST.getlist('trace[]')   
 
         userAnns = drawTrace(userAnns,traces)
+       
+        border = request.POST.get('border','')
+        #if border != '':
+            #h, w = userAnns.shape[:2]
+            #print(h)
+            #print(w)
+            #mask = np.zeros((h+2, w+2), np.uint8)
+            #cv.floodFill(userAnns, mask, (0,0), 1);
+            
+        is_debug = True
+        if is_debug:
+            cv.imwrite('static/debug2.png', userAnns*100)
         #print(userAnns.shape)  
         #print(2)
         #print(time.time() - ts0)
@@ -607,7 +620,7 @@ def refine2(request):
         # call RGR and get mask as return
         time_0 = time.time()       
         #im_color = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
-        time_diff = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
+        time_diff = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border)  
         time_1 = time.time()
         #print(5)
         #print(time.time() - ts0)        
@@ -690,7 +703,7 @@ def drawTrace(userAnns,traces):
     for itline in range(0,len(traces)):
         traceStr = traces[itline]
         trace = [x.strip() for x in traceStr.split(',')]
-
+            
         # each trace "coordinate" contains: x,y,thickness,category,
         # so a line is defined by (trace[i],trace[i+1])--(trace[i+4],trace[i+5]), 
         # with thickness=trace[i+2] (or trace[i+6]) and category=trace[i+3](or trace[i+7])               

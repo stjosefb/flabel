@@ -138,11 +138,11 @@ void runSNIC(
              double*        bv,
              const int                  width,
              const int                  height,
-             int*                       labels,
-             int*                       kclass,
-             vector<int>                roiList,
-             int*                       outnumk,
-             const int                  innumk,
+             int*                       labels,  // output: centroid id untuk tiap piksel
+             int*                       kclass, 
+             vector<int>                roiList, // koordinat x,y dari sampel
+             int*                       outnumk, // output: sama dengan jumlah sampel/centroid?
+             const int                  innumk,  // jumlah sampel/centroid
              const double               compactness)
 {
     const int w = width;
@@ -210,8 +210,10 @@ void runSNIC(
     
     // FILE *f = fopen("dists2.txt", "w");
 
+	int counter = 0;
     while(qlength > 0) //while(nodevec.size() > 0)
     {
+		counter++;
         NODE node = pq.top(); pq.pop(); qlength--;
         const int k = node.k;
         const int cl = node.cl;
@@ -269,6 +271,7 @@ void runSNIC(
             }
         }
     }
+	//printf("%d\n",counter);
     *outnumk = numk;
     // fclose(f);
 
@@ -337,6 +340,7 @@ extern "C" void RGRmain(int* rin, int* gin, int* bin, int* kclass, int* roi, int
 
             if(roi_ > 0)
             {
+				// koordinat x dan y dari seed diformat sedemikian rupa sehingga menjadi tipe data int
                 roiList.push_back(x << 16 | y);
             }
 
@@ -349,6 +353,10 @@ extern "C" void RGRmain(int* rin, int* gin, int* bin, int* kclass, int* roi, int
     //---------------------------
     int numklabels = 0;
 
+	// roiList: daftar seed
+	// klabels: output id centroid untuk tiap piksel (mulai dari 0)
+	// numk: jumlah sampel/centroid
+	// kclass: 
     runSNIC(lvec,avec,bvec,width,height,klabels,kclass,roiList,&numklabels,numk,compactness);
     
     //---------------------------
@@ -363,7 +371,7 @@ extern "C" void RGRmain(int* rin, int* gin, int* bin, int* kclass, int* roi, int
             outlabels[ii] = klabels[i];
             if(outlabels[ii] < 0)
             {
-                outlabels[ii] = numklabels + 1;
+                outlabels[ii] = numklabels + 1;  // label yang memiliki nilai -1, nilainya dijadikan sebesar jumlah sampel + 1 (id centroid terakhir)
             }
             // outClasses[ii] = kclass[i];
             ii++;

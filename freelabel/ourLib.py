@@ -24,7 +24,73 @@ import pickle
 import time
 import copy
 
+from skimage import measure
+#from shapely.geometry import Polygon
+
 #####
+
+def _get_polygons_from_mask(mask):
+    mask2 = mask.copy()
+    #print(mask2)
+    count = 0
+    for idx,m in enumerate(mask2):
+        if m == 1576 or m == 0:
+            #count = count + 1
+            mask2[idx] = 255
+        else:
+            mask2[idx] = 0
+    #clsList = np.unique(mask2)
+    #print(clsList)
+    #print(count)
+    mask2 = np.reshape(mask2,(512,512))    
+    #print(mask.shape)
+    #print(mask2.shape)
+    #contours = measure.find_contours(mask2, 0.5, positive_orientation='low')
+    #print(len(contours))
+    #print(contours)
+    segmentations = _get_polygons_from_mask2(mask)
+    print(segmentations)
+
+def _get_polygons_from_mask2(mask):
+    contours = measure.find_contours(mask, 0.5, positive_orientation='low')
+
+    segmentations = []
+    polygons = []
+    for contour in contours:
+        # Flip from (row, col) representation to (x, y)
+        # and subtract the padding pixel
+        for i in range(len(contour)):
+            row, col = contour[i]
+            contour[i] = (col - 1, row - 1)
+
+        # Make a polygon and simplify it
+        poly = Polygon(contour)
+        poly = poly.simplify(1.0, preserve_topology=False)
+        polygons.append(poly)
+        segmentation = np.array(poly.exterior.coords).ravel().tolist()
+        segmentations.append(segmentation)
+
+    return segmentations
+
+
+def sampleSeedToImg(s, height, width):
+    #print(s[0])
+    #print(s[1])
+    #print(len(s[0]))
+    #print(len(s[1]))
+    
+    init_img = np.zeros((height,width,3),dtype=int)
+    img = np.uint8(init_img)
+    
+    #img = cv.circle(img, (100,100), radius=1, color=(255), thickness=-1)
+    for idx, x in enumerate(s[0]):
+        y = s[1][idx]
+        #print(x,y)
+        #cv.circle(img, (x,y), radius=1, color=(0,0,255), thickness=-1)
+        img[y][x] = (0,255,0)
+        
+    cv.imwrite('static/seeds.png', img)
+    
 
 def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet):
     # h is the index o pixels p_h within R_H. We randomly sample seeds
@@ -44,46 +110,81 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
     # corresponding img-size matrix
     s = R_H[posSeeds]        
     S = np.zeros((height, width))
+    sampleSeedToImg(np.unravel_index(s, S.shape, 'C'), height, width)
     S[np.unravel_index(s, S.shape, 'F')] = 1  
 
     # allocate memory for output returned by reg.growing C++ code
-    RGRout = np.zeros((width*height), dtype=int)
-
+    RGRout = np.zeros((width*height), dtype=int)    
+    
     S = S.flatten(order='F')
 
+    debug = False    
+    if debug:
+        ts0 = time.time()
+        print('a', time.time() - ts0)
+            
     # call reg.growing code (adapted SNIC) in C++, using Cython (see callRGR.pyx and setup.py)
     # perform region growing. PsiMap is the output map of generated
     out_ = callRGR.callRGR(img_r, img_g, img_b, preSeg.astype(np.int32), S.astype(np.int32), width, height, numSamples, m,RGRout.astype(np.int32))
-    PsiMap = np.asarray(out_)       
+    PsiMap = np.asarray(out_)     
+
+    if debug:
+        ts1 = time.time()
+        print('b', ts1 - ts0)
+
+    #_get_polygons_from_mask(PsiMap)
 
     # number of generated clusters.  We subtract 2 to disconsider the pixels pre-classified as background (indexes -1 and 0)
-    N = np.amax(PsiMap)-2
+    N = np.amax(PsiMap)-2  # jumlah cluster/centroid selain cluster piksel background/yang tidak terkategorikan
 
+    if debug:
+        print(N)
     clsScores = clsMap.flatten(order='F')
-    clsScores = clsScores.astype(np.double)
+    clsScores = clsScores.astype(np.double)  # 512*512*jumlahkelas
+    
+    if debug:
+        ts2 = time.time()
+        print('c', ts2 - ts1)
 
     # majority voting per cluster
     for k in range(0, N):       
-        p_j_ = np.nonzero(PsiMap == k)
+        p_j_ = np.nonzero(PsiMap == k)  # index2 dari array yang masuk ke cluster k
         p_j_ = np.asarray(p_j_)
 
         for itCls in range(0, numCls):
+            #print(itCls)
             idxOffset = sz*itCls;
-            p_j_cls = p_j_ + idxOffset;
+            p_j_cls = p_j_ + idxOffset;  # index2 dari array yang masuk ke cluster k di subset array (512*512) yang mewakili kelas itCls
 
             noPositives =  (np.count_nonzero(clsScores[p_j_cls] > 0));
-            clsScores[p_j_cls] = float(noPositives)/p_j_.size
+            clsScores[p_j_cls] = float(noPositives)/p_j_.size  # set score untuk piksel2 di cluster k untuk kelas itCls
+    
+    if debug:
+        ts3 = time.time()
+        print('d', ts3 - ts2)
 
     clsScores = np.reshape(clsScores,(height,width,numCls),order='F')    
 
+    if debug:
+        ts4 = time.time()
+        print('e', ts4 - ts3)
+
+    if debug:
+        ts5 = time.time()
+        print('f', ts5 - ts4)
+
     return_dict[itSet] = clsScores
 ########
-def main(username,img,anns,weight_,m,num_sets=8):
+def main(username,img,anns,weight_,m,num_sets=8,border=''):
     try:
-        print("p1")    
+        #print("p8")    
         debug = False
         single_process = False
         num_sets = 8
+        cell_size = 1.333
+        #cell_size = 4
+        is_border = False
+        #print('sets', num_sets)
         
         ts0 = time.time()
         if debug:
@@ -126,7 +227,10 @@ def main(username,img,anns,weight_,m,num_sets=8):
         # m = .1  # theta_m: balance between
         numSets = num_sets    # number of seeds sets (samplings)
         # cellSize = 10-int(weight_)   # average spacing between samples
-        cellSize = 1.333   # average spacing between samples
+        #cellSize = 1.333   # average spacing between samples
+        #cellSize = 2.666
+        #cellSize = 4
+        cellSize = cell_size
 
         # Rectangular Kernel - equal to strel in matlab
         SE = cv.getStructuringElement(cv.MORPH_RECT, (80, 80))  # used for identifying far background
@@ -149,8 +253,14 @@ def main(username,img,anns,weight_,m,num_sets=8):
         # mask of annotated pixels: 
         # in this case, only annotated traces are high-confidence (index 2),
         # all others are uncertain (index 0)
-        preSeg = np.int32(np.zeros((height,width)))
+        preSeg = np.int32(np.zeros((height,width)))        
+        
         np.putmask(preSeg,anns > 0,2)
+        #for aa in preSeg:
+            #for a in aa:
+                #if a > 0:
+                    #print(a)
+        
         RoI = preSeg
 
         # identify all high confidence pixels composing the RoI
@@ -165,7 +275,20 @@ def main(username,img,anns,weight_,m,num_sets=8):
         # round up
         numSamples = np.ceil(area / cellSize)
 
+        if border != '':
+            h, w = anns.shape[:2]
+            #print(h)
+            #print(w)
+            mask = np.zeros((h+2, w+2), np.uint8)
+            if is_border:
+                cv.floodFill(preSeg, mask, (0,0), -1);
+            
         preSeg = preSeg.flatten()
+        #print(preSeg)
+        #for p in preSeg:
+            #if p > -1:
+                #pass
+                #print(p)
 
         # matrix that will contain the scoremaps for each iteration
         # ref_cls = np.zeros((height, width, numCls, numSets),dtype=float)    
@@ -302,7 +425,7 @@ def main(username,img,anns,weight_,m,num_sets=8):
         return np.zeros(height, width, channels+1)
     
 
-def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8):
+def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border=''):
     ts0 = time.time()
     #print(time.time() - ts0)
 
@@ -314,7 +437,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8):
     #print(time.time() - ts0)
     ts1 = time.time()
     
-    im_color = main(username,img,userAnns,weight_,m,num_sets)
+    im_color = main(username,img,userAnns,weight_,m,num_sets,border)
     #print(type(im_color))
     #print(im_color.shape)
     #print(im_color)
