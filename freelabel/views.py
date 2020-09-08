@@ -548,7 +548,7 @@ def refine3(request):
 
 def refine2(request):
     try:
-        trace_width = 1
+        trace_width = None
         ts0 = time.time()
     
         username = 'dummy1'
@@ -565,8 +565,9 @@ def refine2(request):
         traces = request.POST.getlist('trace[]')   
 
         userAnns = drawTrace(userAnns,traces,trace_width)
-        print(userAnns.shape)
+        #print(userAnns.shape)
         arr_seeds = create_array_seeds(traces,userAnns.shape)
+        #arr_seeds = None
        
         border = request.POST.get('border','')
         #if border != '':
@@ -894,9 +895,22 @@ def create_array_seeds(traces, shape):
 
                 rr, cc = line(r0, c0, r1, c1)
                 
+                if r0 == r1:
+                    rr2, cc2 = line(r0+1, c0, r1+1, c1)
+                else:
+                    rr2, cc2 = line(r0, c0+1, r1, c1+1)
+                
                 jj = sample_line(len(rr), x)
-                for j in jj:
-                    seed[rr[jj], cc[jj]] = color
+                #for j in jj:
+                #    seed[rr[jj], cc[jj]] = color
+                seed[rr[jj], cc[jj]] = color
+                #seed[rr, cc] = color
+                
+                jj2 = sample_line(len(rr2), 7-x)
+                #for j in jj:
+                #    seed[rr[jj], cc[jj]] = color
+                #seed[rr2[jj2], cc2[jj2]] = color
+                #seed[rr2, cc2] = color
                 """
                 #seed[rr, cc] = 255
                 if x < 2:  # 10101010, 01010101

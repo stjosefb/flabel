@@ -202,7 +202,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         definite = True
         debug = False
         single_process = True
-        num_sets = 1
+        num_sets = 8
         cell_size = 1.333
         #cell_size = 4
         is_border = False
