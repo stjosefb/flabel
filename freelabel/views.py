@@ -634,7 +634,7 @@ def refine2(request):
         
         # image path
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
-        
+        print(img_path)
         if is_base64:
             with open(img_path, "rb") as img_file:
                 my_string = base64.b64encode(img_file.read())  
@@ -660,6 +660,7 @@ def refine2(request):
             # return image
             #return FileResponse(image_data)
             response = HttpResponse(image_data, content_type="image/png")
+            print('response')
             #print(6)
             #print(time.time() - ts0)
             #response["Access-Control-Allow-Origin"] = "*"
@@ -706,15 +707,164 @@ def showFinalImg(request):
 def sample_line(len_arr, method):
     jj = []
     
-    if method in [0,1,2,3,4,5,6,7]:
+    """
+    # x
+    # 111111
+    if method in (-1):  # 83,47
+        for x in range(1, len_arr, 1):
+            jj.append(x);
+    """
+    
+    # 0
+    # 101010
+    if method in [0,]: # 95,62
         for x in range(0, len_arr, 2):
             jj.append(x);
-        
+    #print(jj)
+    
+    # 1
+    # 010101
+    if method in [1,]:  # 96,85
+        for x in range(1, len_arr, 2):
+            jj.append(x);
+
+    # 2
+    # 00110011
+    if method in [2,]:  # 96,02
+        for x in range(2, len_arr, 4):
+            jj.append(x);
+        for x in range(3, len_arr, 4):
+            jj.append(x);
+
+    # 3
+    # 11001100
+    if method in [3,]:  # 91,38
+        for x in range(0, len_arr, 4):
+            jj.append(x);
+        for x in range(1, len_arr, 4):
+            jj.append(x);
+
+    # 4
+    # 01100110
+    if method in [4,]:  # 97,22
+        for x in range(1, len_arr, 4):
+            jj.append(x);
+        for x in range(2, len_arr, 4):
+            jj.append(x);
+
+    # 5
+    # 10011001
+    if method in [5,]:  # 96,22
+        for x in range(0, len_arr, 4):
+            jj.append(x);
+        for x in range(3, len_arr, 4):
+            jj.append(x);
+
+
+    # 6
+    # 101100
+    if method in [99,]:  # x96,39x 95,38
+        for x in range(0, len_arr, 6):
+            jj.append(x);
+        for x in range(2, len_arr, 6):
+            jj.append(x);
+        for x in range(3, len_arr, 6):
+            jj.append(x);    
+
+    # 7
+    # 010011
+    if method in [99,]:  # 96,11
+        for x in range(1, len_arr, 6):
+            jj.append(x);
+        for x in range(4, len_arr, 6):
+            jj.append(x);
+        for x in range(5, len_arr, 6):
+            jj.append(x);    
+
+    # 8
+    # 001101
+    if method in [-1,]:  # 87,33
+        for x in range(2, len_arr, 6):
+            jj.append(x);
+        for x in range(3, len_arr, 6):
+            jj.append(x);
+        for x in range(5, len_arr, 6):
+            jj.append(x);    
+
+    # 9
+    # 110010
+    if method in [99,]:  # 90,91
+        for x in range(1, len_arr, 6):
+            jj.append(x);
+        for x in range(2, len_arr, 6):
+            jj.append(x);
+        for x in range(4, len_arr, 6):
+            jj.append(x);    
+
+    # 10
+    # 100
+    if method in [6,]:  # 94,99
+        for x in range(0, len_arr, 3):
+            jj.append(x);
+
+    # 11
+    # 010
+    if method in [7,]:  # 96,62
+        for x in range(1, len_arr, 3):
+            jj.append(x);
+
+    # 12
+    # 001
+    if method in [99,]:  # 95,94
+        for x in range(2, len_arr, 3):
+            jj.append(x);
+
+    # 13
+    # 110
+    if method in [99,]:  # 96,62
+        for x in range(0, len_arr, 3):
+            jj.append(x);
+        for x in range(1, len_arr, 3):
+            jj.append(x);
+
+    # 14
+    # 101
+    if method in [99,]:  # 95,39
+        for x in range(0, len_arr, 3):
+            jj.append(x);
+        for x in range(2, len_arr, 3):
+            jj.append(x);
+
+    # 15
+    # 011
+    if method in [99,]:  # 90,45
+        for x in range(1, len_arr, 3):
+            jj.append(x);
+        for x in range(2, len_arr, 3):
+            jj.append(x);
+
+       
+    """
+    # ?
+    # 1011001 1011001
+    if method in [1,2,3,4,5,6,7]:  # 96,68
+        for x in range(0, len_arr, 7):
+            jj.append(x);
+        for x in range(2, len_arr, 7):
+            jj.append(x);
+        for x in range(3, len_arr, 7):
+            jj.append(x);
+        for x in range(6, len_arr, 7):
+            jj.append(x);
+    """
+            
+    #print(jj[0:20])
+            
     return jj
     
     
 def create_array_seeds(traces, shape):
-    num_seed = 1
+    num_seed = 8
     #img = np.uint8(seed)
     
     #width = 1

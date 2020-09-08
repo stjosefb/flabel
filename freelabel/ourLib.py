@@ -95,7 +95,7 @@ def sampleSeedToImg(s, height, width, itSet):
     
 def sampleSeedToImg2(S, itSet):
     pass
-    #cv.imwrite('static/seeds_'+str(itSet)+'.png', S*250)
+    cv.imwrite('static/seeds_'+str(itSet)+'.png', S*250)
     
 
 def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2, seeds=None):
