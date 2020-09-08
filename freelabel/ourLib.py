@@ -27,6 +27,7 @@ import copy
 from skimage import measure
 #from shapely.geometry import Polygon
 
+
 #####
 
 def _get_polygons_from_mask(mask):
@@ -73,7 +74,7 @@ def _get_polygons_from_mask2(mask):
     return segmentations
 
 
-def sampleSeedToImg(s, height, width):
+def sampleSeedToImg(s, height, width, itSet):
     #print(s[0])
     #print(s[1])
     #print(len(s[0]))
@@ -89,29 +90,46 @@ def sampleSeedToImg(s, height, width):
         #cv.circle(img, (x,y), radius=1, color=(0,0,255), thickness=-1)
         img[y][x] = (0,255,0)
         
-    cv.imwrite('static/seeds.png', img)
+    cv.imwrite('static/seeds_'+str(itSet)+'.png', img)
+    
+    
+def sampleSeedToImg2(S, itSet):
+    pass
+    #cv.imwrite('static/seeds_'+str(itSet)+'.png', S*250)
     
 
-def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet):
-    # h is the index o pixels p_h within R_H. We randomly sample seeds
-    # according to h~U(1,|R_H|)
-    # round down + Uniform distribution
-    h = np.floor(area * np.random.random((area,)))
-    h = h.astype(np.int64)
- 
-    # s is the index of each seed for current region growing step
-    # sequence
-    idSeeds = np.arange(0,numSamples) # IDs of random seeds
-    idSeeds = idSeeds.astype(np.int64)
+def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2, seeds=None):
+    if seeds is None:
+    #if True:
+        # h is the index o pixels p_h within R_H. We randomly sample seeds
+        # according to h~U(1,|R_H|)
+        # round down + Uniform distribution
+        h = np.floor(area * np.random.random((area,)))
+        h = h.astype(np.int64)
+     
+        # s is the index of each seed for current region growing step
+        # sequence
+        idSeeds = np.arange(0,numSamples) # IDs of random seeds
+        idSeeds = idSeeds.astype(np.int64)
 
-    posSeeds = h[idSeeds] # get the position of these seeds within R_H
+        posSeeds = h[idSeeds] # get the position of these seeds within R_H
 
-    # S is the corresponding set of all seeds, mapped into
-    # corresponding img-size matrix
-    s = R_H[posSeeds]        
-    S = np.zeros((height, width))
-    sampleSeedToImg(np.unravel_index(s, S.shape, 'C'), height, width)
-    S[np.unravel_index(s, S.shape, 'F')] = 1  
+        # S is the corresponding set of all seeds, mapped into
+        # corresponding img-size matrix
+        s = R_H[posSeeds]    
+        #print(s)
+        S = np.zeros((height, width))
+                
+        S[np.unravel_index(s, S.shape, 'F')] = 1  
+        #sampleSeedToImg(np.unravel_index(s, S.shape, 'C'), height, width, itSet)
+        sampleSeedToImg2(S, itSet)
+    else:
+        S = seeds
+        print('definite')
+        sampleSeedToImg2(S, itSet)
+
+    # for reporting
+    
 
     # allocate memory for output returned by reg.growing C++ code
     RGRout = np.zeros((width*height), dtype=int)    
@@ -174,17 +192,25 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
         print('f', ts5 - ts4)
 
     return_dict[itSet] = clsScores
+    return_dict2[itSet] = np.count_nonzero(S)
+    
 ########
-def main(username,img,anns,weight_,m,num_sets=8,border=''):
+def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
     try:
-        #print("p8")    
+        #print(arr_seeds)
+        #print("p8")
+        definite = True
         debug = False
-        single_process = False
-        num_sets = 8
+        single_process = True
+        num_sets = 1
         cell_size = 1.333
         #cell_size = 4
         is_border = False
         #print('sets', num_sets)
+        
+        if definite and arr_seeds is not None:
+            num_sets = len(arr_seeds)
+        #print(num_sets)
         
         ts0 = time.time()
         if debug:
@@ -299,25 +325,32 @@ def main(username,img,anns,weight_,m,num_sets=8,border=''):
         if not(single_process):
             manager = multiprocessing.Manager()
             return_dict = manager.dict()
+            return_dict2 = manager.dict()
         else:
             return_dict = dict()
+            return_dict2 = dict()
 
         ts3 = time.time()
         if debug:
             print(ts3 - ts2)
         
         ###
+        seeds = None
         if not(single_process):
             print('multiprocess')
             jobs = []
             for itSet in range(0, numSets):
-                p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet))
+                if definite:
+                    seeds = arr_seeds[itSet]
+                p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds))
                 jobs.append(p)
                 p.start()
         else:
             print('singleprocess')
             for itSet in range(0, numSets):
-                regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet)
+                if definite:
+                    seeds = arr_seeds[itSet]            
+                regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds)
 
         ts4 = time.time()
         if True:
@@ -343,8 +376,10 @@ def main(username,img,anns,weight_,m,num_sets=8,border=''):
 
         if not(single_process):
             outputPar = return_dict.values()
+            outputPar2 = return_dict2.values()
         else:
             outputPar = list(return_dict.values())
+            outputPar2 = list(return_dict2.values())
         #print(outputPar)
         ts6 = time.time()
         if True:
@@ -359,6 +394,10 @@ def main(username,img,anns,weight_,m,num_sets=8,border=''):
             print(ts6z - ts6)
 
         outputPar = np.asarray(outputPar)
+        outputPar2 = np.asarray(outputPar2)
+        print(outputPar2)
+        numSeed = np.average(outputPar2)
+        print(numSeed)
         ts7 = time.time()
         if debug:
             print(7)
@@ -413,7 +452,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border=''):
         im_color = cv.merge(rgba,4) 
         
 
-        return im_color
+        return im_color, numSeed
     
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -425,7 +464,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border=''):
         return np.zeros(height, width, channels+1)
     
 
-def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border=''):
+def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seeds=None):
     ts0 = time.time()
     #print(time.time() - ts0)
 
@@ -437,7 +476,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border=''):
     #print(time.time() - ts0)
     ts1 = time.time()
     
-    im_color = main(username,img,userAnns,weight_,m,num_sets,border)
+    im_color, numSeed = main(username,img,userAnns,weight_,m,num_sets,border,arr_seeds)
     #print(type(im_color))
     #print(im_color.shape)
     #print(im_color)
@@ -452,7 +491,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border=''):
     cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
     
     #print(time.time() - ts2)
-    return ts2-ts1
+    return ts2-ts1, numSeed
     
 
 def traceLine(img,r0,c0,r1,c1,catId,thick):

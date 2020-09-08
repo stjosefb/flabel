@@ -32,7 +32,6 @@ import time
 import base64
 import cv2 as cv
 
-
 # used to return numpy arrays via AJAX to JS side
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -549,6 +548,7 @@ def refine3(request):
 
 def refine2(request):
     try:
+        trace_width = 1
         ts0 = time.time()
     
         username = 'dummy1'
@@ -564,7 +564,9 @@ def refine2(request):
         # get coordinates of trace to be drawn
         traces = request.POST.getlist('trace[]')   
 
-        userAnns = drawTrace(userAnns,traces)
+        userAnns = drawTrace(userAnns,traces,trace_width)
+        print(userAnns.shape)
+        arr_seeds = create_array_seeds(traces,userAnns.shape)
        
         border = request.POST.get('border','')
         #if border != '':
@@ -598,6 +600,9 @@ def refine2(request):
         # divide by to adjust from [1,10] to [.1,1] 
         m = float(request.POST.get('m'))/10
 
+        if is_base64:
+            numPixelUserAnns = np.count_nonzero(userAnns > 0)
+
         # remove older files
         #for filename in glob.glob("static/"+username+"/refined*"):
         #    os.remove(filename) 
@@ -620,7 +625,7 @@ def refine2(request):
         # call RGR and get mask as return
         time_0 = time.time()       
         #im_color = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
-        time_diff = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border)  
+        time_diff, numSeed = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border,arr_seeds)  
         time_1 = time.time()
         #print(5)
         #print(time.time() - ts0)        
@@ -637,7 +642,9 @@ def refine2(request):
             json_data = {
                 #'time': time_1-time_0,
                 'time': time_diff,
-                'imgbase64': 'data:image/png;base64,' + my_string.decode('utf-8') 
+                'imgbase64': 'data:image/png;base64,' + my_string.decode('utf-8'),
+                'num_pixel_trace': numPixelUserAnns,
+                'num_seed': numSeed,
             }
             response = JsonResponse(json_data)
         else:
@@ -696,7 +703,113 @@ def showFinalImg(request):
 
     return render(request, 'freelabel/main.html')
 
-def drawTrace(userAnns,traces):
+def sample_line(len_arr, method):
+    jj = []
+    
+    if method in [0,1,2,3,4,5,6,7]:
+        for x in range(0, len_arr, 2):
+            jj.append(x);
+        
+    return jj
+    
+    
+def create_array_seeds(traces, shape):
+    num_seed = 1
+    #img = np.uint8(seed)
+    
+    #width = 1
+    color = 1
+    
+    #print(line(8, 8, 1, 1))
+    arr_seeds = []
+    for x in range(num_seed):
+        seed = np.zeros(shape,dtype=int)
+        for itline in range(0,len(traces)):
+            
+            
+            traceStr = traces[itline]
+            trace = [x.strip() for x in traceStr.split(',')]
+                
+            # each trace "coordinate" contains: x,y,thickness,category,
+            # so a line is defined by (trace[i],trace[i+1])--(trace[i+4],trace[i+5]), 
+            # with thickness=trace[i+2] (or trace[i+6]) and category=trace[i+3](or trace[i+7])               
+            #pts = np.empty(shape=[0, 2]);
+            for i in range(0,len(trace)-5,4):            
+                # trace line between coordinates
+                c0 = int(trace[i]) # i.e. x0
+                r0 = int(trace[i+1]) # i.e. y0
+                
+                c1 = int(trace[i+4])
+                r1 = int(trace[i+5])
+
+                rr, cc = line(r0, c0, r1, c1)
+                
+                jj = sample_line(len(rr), x)
+                for j in jj:
+                    seed[rr[jj], cc[jj]] = color
+                """
+                #seed[rr, cc] = 255
+                if x < 2:  # 10101010, 01010101
+                    for j in range(x,len(rr),2):
+                        seed[rr[j], cc[j]] = color
+                elif x < 4:  # 11001100, 01100110
+                    for j in range(x-2,len(rr)-1,4):
+                        seed[rr[j], cc[j]] = color
+                        seed[rr[j+1], cc[j+1]] = color
+                    #seed[rr[-1], cc[-1]] = color
+                elif x < 5:  # 10011001
+                    #y = x-4
+                    y = 0
+                    for j in range(x-4,len(rr)-3,4):
+                        seed[rr[j+y], cc[j+y]] = color
+                        seed[rr[j+3+y], cc[j+3+y]] = color                        
+                elif x < 6:  # 00110011
+                    #y = x-4
+                    y = 0
+                    for j in range(x-4,len(rr)-2,4):
+                        seed[rr[j+1+y], cc[j+1+y]] = color
+                        seed[rr[j+2+y], cc[j+2+y]] = color                                                
+                elif x < 7:  # 101100 101100, 010110 010110
+                    for j in range(0,len(rr)-3,6):
+                        seed[rr[j], cc[j]] = color
+                        seed[rr[j+2], cc[j+2]] = color
+                        seed[rr[j+3], cc[j+3]] = color                        
+                elif x < 8:  # 010011 010011
+                    for j in range(0,len(rr)-5,6):
+                        seed[rr[j+1], cc[j+1]] = color
+                        seed[rr[j+4], cc[j+4]] = color
+                        seed[rr[j+5], cc[j+5]] = color
+                    if len(rr) % 6 > 2:
+                        seed[rr[-2], cc[-2]] = color
+                    if len(rr) % 6 > 4:
+                        seed[rr[-4], cc[-4]] = color
+                """     
+                """
+                pts = np.append(pts,[[c0,r0]],axis=0)
+                pts = np.append(pts,[[c1,r1]],axis=0)
+
+                if width:
+                    thick = width
+                else:
+                    thick = int(trace[i+2])
+                if color:
+                    catId = color
+                else:
+                    catId = int(trace[i+3])
+                    #discrete_line = list(zip(*line(*start, *end)))
+                """
+            #seed = tracePolyline(img,pts,catId,thick)  
+        
+        arr_seeds.append(seed)
+        
+        cv.imwrite('static/newseed_'+str(x)+'.png', seed*250)
+    
+    
+    
+    return arr_seeds
+
+
+def drawTrace(userAnns,traces, width=None):
 
     img = np.uint8(userAnns)
 
@@ -720,7 +833,10 @@ def drawTrace(userAnns,traces):
             pts = np.append(pts,[[c0,r0]],axis=0)
             pts = np.append(pts,[[c1,r1]],axis=0)
 
-            thick = int(trace[i+2])
+            if width:
+                thick = width
+            else:
+                thick = int(trace[i+2])
             catId = int(trace[i+3])
         userAnns = tracePolyline(img,pts,catId,thick)    
 
