@@ -95,10 +95,86 @@ def sampleSeedToImg(s, height, width, itSet):
     
 def sampleSeedToImg2(S, itSet):
     pass
-    cv.imwrite('static/seeds_'+str(itSet)+'.png', S*250)
+    #cv.imwrite('static/seeds_'+str(itSet)+'.png', S*250)
     
 
-def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2, seeds=None):
+def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet):
+    #print('regGrowing')
+    #if seeds is None:
+    #if True:
+    # h is the index o pixels p_h within R_H. We randomly sample seeds
+    # according to h~U(1,|R_H|)
+    # round down + Uniform distribution
+    h = np.floor(area * np.random.random((area,)))
+    h = h.astype(np.int64)
+ 
+    # s is the index of each seed for current region growing step
+    # sequence
+    idSeeds = np.arange(0,numSamples) # IDs of random seeds
+    idSeeds = idSeeds.astype(np.int64)
+
+    posSeeds = h[idSeeds] # get the position of these seeds within R_H
+
+    # S is the corresponding set of all seeds, mapped into
+    # corresponding img-size matrix
+    s = R_H[posSeeds]    
+    #print(s)
+    S = np.zeros((height, width))
+            
+    S[np.unravel_index(s, S.shape, 'F')] = 1  
+    #sampleSeedToImg(np.unravel_index(s, S.shape, 'C'), height, width, itSet)
+    #sampleSeedToImg2(S, itSet)
+
+    # for reporting
+    
+
+    # allocate memory for output returned by reg.growing C++ code
+    RGRout = np.zeros((width*height), dtype=int)    
+    
+    S = S.flatten(order='F')
+
+    
+    #print('regGrowing callrgr')
+    
+    # call reg.growing code (adapted SNIC) in C++, using Cython (see callRGR.pyx and setup.py)
+    # perform region growing. PsiMap is the output map of generated
+    out_ = callRGR.callRGR(img_r, img_g, img_b, preSeg.astype(np.int32), S.astype(np.int32), width, height, numSamples, m,RGRout.astype(np.int32))
+    PsiMap = np.asarray(out_)     
+
+
+    #_get_polygons_from_mask(PsiMap)
+
+    # number of generated clusters.  We subtract 2 to disconsider the pixels pre-classified as background (indexes -1 and 0)
+    N = np.amax(PsiMap)-2  # jumlah cluster/centroid selain cluster piksel background/yang tidak terkategorikan
+
+    clsScores = clsMap.flatten(order='F')
+    clsScores = clsScores.astype(np.double)  # 512*512*jumlahkelas
+    
+
+    # majority voting per cluster
+    for k in range(0, N):       
+        p_j_ = np.nonzero(PsiMap == k)  # index2 dari array yang masuk ke cluster k
+        p_j_ = np.asarray(p_j_)
+
+        for itCls in range(0, numCls):
+            #print(itCls)
+            idxOffset = sz*itCls;
+            p_j_cls = p_j_ + idxOffset;  # index2 dari array yang masuk ke cluster k di subset array (512*512) yang mewakili kelas itCls
+
+            noPositives =  (np.count_nonzero(clsScores[p_j_cls] > 0));
+            clsScores[p_j_cls] = float(noPositives)/p_j_.size  # set score untuk piksel2 di cluster k untuk kelas itCls
+    
+    clsScores = np.reshape(clsScores,(height,width,numCls),order='F')    
+
+
+    return_dict[itSet] = clsScores
+
+    
+    #print('regGrowing end')
+
+
+def regGrowing2(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2, seeds=None, record_num_seed=False):
+    #print('regGrowing')
     if seeds is None:
     #if True:
         # h is the index o pixels p_h within R_H. We randomly sample seeds
@@ -125,7 +201,7 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
         sampleSeedToImg2(S, itSet)
     else:
         S = seeds
-        print('definite')
+        #print('definite')
         sampleSeedToImg2(S, itSet)
 
     # for reporting
@@ -136,11 +212,13 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
     
     S = S.flatten(order='F')
 
-    debug = False    
+    debug = True    
     if debug:
         ts0 = time.time()
         print('a', time.time() - ts0)
-            
+    
+    #print('regGrowing callrgr')
+    
     # call reg.growing code (adapted SNIC) in C++, using Cython (see callRGR.pyx and setup.py)
     # perform region growing. PsiMap is the output map of generated
     out_ = callRGR.callRGR(img_r, img_g, img_b, preSeg.astype(np.int32), S.astype(np.int32), width, height, numSamples, m,RGRout.astype(np.int32))
@@ -156,7 +234,8 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
     N = np.amax(PsiMap)-2  # jumlah cluster/centroid selain cluster piksel background/yang tidak terkategorikan
 
     if debug:
-        print(N)
+        pass
+        #print(N)
     clsScores = clsMap.flatten(order='F')
     clsScores = clsScores.astype(np.double)  # 512*512*jumlahkelas
     
@@ -192,16 +271,22 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
         print('f', ts5 - ts4)
 
     return_dict[itSet] = clsScores
-    return_dict2[itSet] = np.count_nonzero(S)
+    
+    if record_num_seed: 
+        return_dict2[itSet] = np.count_nonzero(S)
+    
+    #print('regGrowing end')
+    
     
 ########
 def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
     try:
         #print(arr_seeds)
         #print("p8")
+        record_num_seed = False
         definite = True
         debug = False
-        single_process = True
+        single_process = False
         num_sets = 8
         cell_size = 1.333
         #cell_size = 4
@@ -322,13 +407,16 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         
         num_cores = multiprocessing.cpu_count()
 
+        return_dict2 = None
         if not(single_process):
             manager = multiprocessing.Manager()
             return_dict = manager.dict()
-            return_dict2 = manager.dict()
+            if record_num_seed:
+                return_dict2 = manager.dict()
         else:
             return_dict = dict()
-            return_dict2 = dict()
+            if record_num_seed:
+                return_dict2 = dict()
 
         ts3 = time.time()
         if debug:
@@ -340,17 +428,20 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
             print('multiprocess')
             jobs = []
             for itSet in range(0, numSets):
-                if definite:
+                if definite and arr_seeds is not None:
                     seeds = arr_seeds[itSet]
-                p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds))
+                #p = multiprocessing.Process(target=regGrowing2, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds,record_num_seed))
+                p = multiprocessing.Process(target=regGrowing, args=(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet))
                 jobs.append(p)
                 p.start()
         else:
             print('singleprocess')
             for itSet in range(0, numSets):
-                if definite:
+                #print(itSet)
+                if definite and arr_seeds is not None:
                     seeds = arr_seeds[itSet]            
-                regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds)
+                #regGrowing2(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet,return_dict2,seeds,record_num_seed)
+                regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,clsMap,numCls,return_dict,itSet)
 
         ts4 = time.time()
         if True:
@@ -376,10 +467,12 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
 
         if not(single_process):
             outputPar = return_dict.values()
-            outputPar2 = return_dict2.values()
+            if record_num_seed:
+                outputPar2 = return_dict2.values()
         else:
             outputPar = list(return_dict.values())
-            outputPar2 = list(return_dict2.values())
+            if record_num_seed:
+                outputPar2 = list(return_dict2.values())
         #print(outputPar)
         ts6 = time.time()
         if True:
@@ -394,10 +487,14 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
             print(ts6z - ts6)
 
         outputPar = np.asarray(outputPar)
-        outputPar2 = np.asarray(outputPar2)
-        print(outputPar2)
-        numSeed = np.average(outputPar2)
-        print(numSeed)
+        if record_num_seed:
+            outputPar2 = np.asarray(outputPar2)
+        #print(outputPar2)
+        if record_num_seed:
+            numSeed = np.average(outputPar2)
+        else:
+            numSeed = 0
+        #print(numSeed)
         ts7 = time.time()
         if debug:
             print(7)
@@ -450,7 +547,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         b, g, r = cv.split(im_color)
         rgba = [b,g,r, alpha]
         im_color = cv.merge(rgba,4) 
-        
+        #print('main')
 
         return im_color, numSeed
     
@@ -487,9 +584,9 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seed
     
     #print(time.time() - ts1)
     ts2 = time.time()
-
+    print('static/'+username+'/refined'+str(cnt)+'.png')
     cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
-    
+    print('static/'+username+'/refined'+str(cnt)+'.png')
     #print(time.time() - ts2)
     return ts2-ts1, numSeed
     

@@ -452,7 +452,10 @@ def refine(request):
 
     userAnns = drawTrace(userAnns,traces)
 
-    username = request.user.username
+    if True:
+        username = request.user.username
+    else:
+        username = 'custom1'
 
     # get URL of image
     url = request.POST.get('img')
@@ -566,8 +569,8 @@ def refine2(request):
 
         userAnns = drawTrace(userAnns,traces,trace_width)
         #print(userAnns.shape)
-        arr_seeds = create_array_seeds(traces,userAnns.shape)
-        #arr_seeds = None
+        #arr_seeds = create_array_seeds2(traces,userAnns.shape)
+        arr_seeds = None
        
         border = request.POST.get('border','')
         #if border != '':
@@ -577,7 +580,7 @@ def refine2(request):
             #mask = np.zeros((h+2, w+2), np.uint8)
             #cv.floodFill(userAnns, mask, (0,0), 1);
             
-        is_debug = True
+        is_debug = False
         if is_debug:
             cv.imwrite('static/debug2.png', userAnns*100)
         #print(userAnns.shape)  
@@ -632,10 +635,10 @@ def refine2(request):
         #print(time.time() - ts0)        
         #print(2)
         #request.session['userAnns'] = json.dumps({'userAnns': userAnns}, cls=NumpyEncoder)
-        
+        #print(username, str(ID))
         # image path
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
-        print(img_path)
+        #print(img_path)
         if is_base64:
             with open(img_path, "rb") as img_file:
                 my_string = base64.b64encode(img_file.read())  
@@ -661,7 +664,7 @@ def refine2(request):
             # return image
             #return FileResponse(image_data)
             response = HttpResponse(image_data, content_type="image/png")
-            print('response')
+            #print('response')
             #print(6)
             #print(time.time() - ts0)
             #response["Access-Control-Allow-Origin"] = "*"
@@ -705,9 +708,10 @@ def showFinalImg(request):
 
     return render(request, 'freelabel/main.html')
 
-def sample_line(len_arr, method):
+def sample_line(len_arr, method, xs=[0,1,2,3,4,5,6,7]):
     jj = []
     
+    slct_method = xs[method]
     """
     # x
     # 111111
@@ -718,20 +722,22 @@ def sample_line(len_arr, method):
     
     # 0
     # 101010
-    if method in [0,]: # 95,62
+    if slct_method == 0: # 95,62
         for x in range(0, len_arr, 2):
             jj.append(x);
     #print(jj)
     
     # 1
     # 010101
-    if method in [1,]:  # 96,85
+    #if method in [1,]:  # 96,85
+    if slct_method == 1:
         for x in range(1, len_arr, 2):
             jj.append(x);
 
     # 2
     # 00110011
-    if method in [2,]:  # 96,02
+    if slct_method == 2:
+    #if method in [2,]:  # 96,02
         for x in range(2, len_arr, 4):
             jj.append(x);
         for x in range(3, len_arr, 4):
@@ -739,7 +745,7 @@ def sample_line(len_arr, method):
 
     # 3
     # 11001100
-    if method in [3,]:  # 91,38
+    if slct_method == 3:  # 91,38
         for x in range(0, len_arr, 4):
             jj.append(x);
         for x in range(1, len_arr, 4):
@@ -747,7 +753,7 @@ def sample_line(len_arr, method):
 
     # 4
     # 01100110
-    if method in [4,]:  # 97,22
+    if slct_method == 4:  # 97,22
         for x in range(1, len_arr, 4):
             jj.append(x);
         for x in range(2, len_arr, 4):
@@ -755,7 +761,7 @@ def sample_line(len_arr, method):
 
     # 5
     # 10011001
-    if method in [5,]:  # 96,22
+    if slct_method == 5:  # 96,22
         for x in range(0, len_arr, 4):
             jj.append(x);
         for x in range(3, len_arr, 4):
@@ -764,7 +770,7 @@ def sample_line(len_arr, method):
 
     # 6
     # 101100
-    if method in [99,]:  # x96,39x 95,38
+    if slct_method == 8:  # x96,39x 95,38
         for x in range(0, len_arr, 6):
             jj.append(x);
         for x in range(2, len_arr, 6):
@@ -774,7 +780,7 @@ def sample_line(len_arr, method):
 
     # 7
     # 010011
-    if method in [99,]:  # 96,11
+    if slct_method == 9:  # 96,11
         for x in range(1, len_arr, 6):
             jj.append(x);
         for x in range(4, len_arr, 6):
@@ -784,7 +790,7 @@ def sample_line(len_arr, method):
 
     # 8
     # 001101
-    if method in [-1,]:  # 87,33
+    if slct_method == 10:  # 87,33
         for x in range(2, len_arr, 6):
             jj.append(x);
         for x in range(3, len_arr, 6):
@@ -794,7 +800,7 @@ def sample_line(len_arr, method):
 
     # 9
     # 110010
-    if method in [99,]:  # 90,91
+    if slct_method == 11:  # 90,91
         for x in range(1, len_arr, 6):
             jj.append(x);
         for x in range(2, len_arr, 6):
@@ -804,25 +810,25 @@ def sample_line(len_arr, method):
 
     # 10
     # 100
-    if method in [6,]:  # 94,99
+    if slct_method == 6:  # 94,99
         for x in range(0, len_arr, 3):
             jj.append(x);
 
     # 11
     # 010
-    if method in [7,]:  # 96,62
+    if slct_method == 7:  # 96,62
         for x in range(1, len_arr, 3):
             jj.append(x);
 
     # 12
     # 001
-    if method in [99,]:  # 95,94
+    if slct_method == 12:  # 95,94
         for x in range(2, len_arr, 3):
             jj.append(x);
 
     # 13
     # 110
-    if method in [99,]:  # 96,62
+    if slct_method == 13:  # 96,62
         for x in range(0, len_arr, 3):
             jj.append(x);
         for x in range(1, len_arr, 3):
@@ -830,7 +836,7 @@ def sample_line(len_arr, method):
 
     # 14
     # 101
-    if method in [99,]:  # 95,39
+    if slct_method == 14:  # 95,39
         for x in range(0, len_arr, 3):
             jj.append(x);
         for x in range(2, len_arr, 3):
@@ -838,10 +844,35 @@ def sample_line(len_arr, method):
 
     # 15
     # 011
-    if method in [99,]:  # 90,45
+    if slct_method == 15:  # 90,45
         for x in range(1, len_arr, 3):
             jj.append(x);
         for x in range(2, len_arr, 3):
+            jj.append(x);
+
+    # 16
+    # 1000
+    if slct_method == 16:  # 94,99
+        for x in range(0, len_arr, 4):
+            jj.append(x);
+
+    # 17
+    # 0100
+    if slct_method == 17:  # 96,62
+        for x in range(1, len_arr, 4):
+            jj.append(x);
+
+    # 18
+    # 0010
+    if slct_method == 18:  # 95,94
+        for x in range(2, len_arr, 4):
+            jj.append(x);
+
+
+    # 19
+    # 0010
+    if slct_method == 19:  # 
+        for x in range(2, len_arr, 4):
             jj.append(x);
 
        
@@ -862,6 +893,72 @@ def sample_line(len_arr, method):
     #print(jj[0:20])
             
     return jj
+
+
+def sample_seed(seed, x, xs=None):
+    RoI = seed.copy()
+    R_H = np.nonzero(RoI.flatten('F') > 0)
+    R_H = R_H[0]
+    print(R_H)
+    jj = sample_line(len(R_H), x, xs)
+    R_H2 = R_H[jj]
+    print(R_H2)
+    S = np.zeros(seed.shape)
+            
+    S[np.unravel_index(R_H2, S.shape, 'F')] = 1  
+
+    return S
+
+def create_array_seeds2(traces, shape, num_seed=8):
+    arr_seeds = []
+
+    methods = [0,1,2,3,4,5,6,7]
+    #methods = [16,17,18,19,4,5,6,7]
+    num_seed = len(methods)
+            
+    #print('2')
+    for x in range(num_seed):
+        seed = np.zeros(shape,dtype=int)
+        
+        for itline in range(0,len(traces)):
+            seed_per_trace = np.zeros(shape,dtype=int)
+            img = np.uint8(seed_per_trace)
+            traceStr = traces[itline]
+            trace = [x.strip() for x in traceStr.split(',')]
+                
+            # each trace "coordinate" contains: x,y,thickness,category,
+            # so a line is defined by (trace[i],trace[i+1])--(trace[i+4],trace[i+5]), 
+            # with thickness=trace[i+2] (or trace[i+6]) and category=trace[i+3](or trace[i+7])               
+            pts = np.empty(shape=[0, 2]);
+            for i in range(0,len(trace)-5,4):            
+                
+                # trace line between coordinates
+                c0 = int(trace[i]) # i.e. x0
+                r0 = int(trace[i+1]) # i.e. y0
+                
+                c1 = int(trace[i+4])
+                r1 = int(trace[i+5])
+
+                pts = np.append(pts,[[c0,r0]],axis=0)
+                pts = np.append(pts,[[c1,r1]],axis=0)
+
+                #if width:
+                #    thick = width
+                #else:
+                thick = int(trace[i+2])
+                catId = 1
+            seed_per_trace = tracePolyline(img,pts,catId,thick) 
+            
+            # sampling
+            seed_per_trace = sample_seed(seed_per_trace, x, methods)
+            
+            seed = np.logical_or(seed, seed_per_trace)
+        
+        
+        arr_seeds.append(seed)        
+        cv.imwrite('static/newseed_'+str(x)+'.png', seed*250)
+        
+    return arr_seeds
     
     
 def create_array_seeds(traces, shape):
