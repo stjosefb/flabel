@@ -597,7 +597,7 @@ def refine2(request):
         # weight of traces, which defines the spacing between samples in RGR
         weight_ = int(request.POST.get('weight'))
         
-        num_sets = int(request.POST.get('num_sets',8))
+        num_sets = int(request.POST.get('num_sets',1))
         is_base64 = request.POST.get('base64',0) == '1'
 
         # theta_m: regulates weight of color-similarity vs spatial-proximity

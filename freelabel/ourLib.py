@@ -279,15 +279,15 @@ def regGrowing2(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,c
     
     
 ########
-def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
+def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None,definite=False):
     try:
         #print(arr_seeds)
         #print("p8")
         record_num_seed = False
-        definite = True
+        #definite = False
         debug = False
         single_process = False
-        num_sets = 8
+        #num_sets = 8
         cell_size = 1.333
         #cell_size = 4
         is_border = False
@@ -295,7 +295,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         
         if definite and arr_seeds is not None:
             num_sets = len(arr_seeds)
-        #print(num_sets)
+        print('num_sets', num_sets)
         
         ts0 = time.time()
         if debug:
@@ -560,6 +560,114 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         
         return np.zeros(height, width, channels+1)
     
+    
+def createSeedsFromPrevResult(im_color):
+    # image as array black/white
+    _, _, _, a = cv.split(im_color)
+    cv.imwrite('static/debug/'+'dummy1'+'/orig'+''+'.png', a)
+    
+    # copy
+    z = np.copy(a)
+    
+    
+    #print(a)
+    #print(a.shape)
+  
+    # cv dilation
+    kernel = np.ones((4,4),np.uint8)
+    dilation = cv.dilate(z,kernel,iterations = 1)
+    cv.imwrite('static/debug/'+'dummy1'+'/dilation'+''+'.png', dilation)
+    
+    # edge
+    #cv.imwrite('static/debug/'+'dummy1'+'/edgebg'+''+'.png', a)
+    
+    # cv erotion
+    kernel = np.ones((3,3),np.uint8)
+    erotion = cv.erode(z,kernel,iterations = 1)
+    cv.imwrite('static/debug/'+'dummy1'+'/erotion'+''+'.png', erotion)
+    
+    # edge
+    #cv.imwrite('static/debug/'+'dummy1'+'/edgefg'+''+'.png', a)
+    
+    # print image array black/white
+    """
+    try:
+        cv.imwrite('static/debug/'+'dummy1'+'/orig'+''+'.png', a)
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+    """
+    
+    arr_seeds = []
+    user_anns = []
+    
+    # user annotations
+    user_anns = createUserAnnsFromPrevResult(im_color, dilation, erotion)
+    cv.imwrite('static/debug/'+'dummy1'+'/useranns'+''+'.png', user_anns)
+    
+    seed = np.copy(user_anns)
+    seed[seed > 0] = 1
+    arr_seeds.append(seed)
+     
+    return arr_seeds, user_anns
+
+
+def createUserAnnsFromPrevResult(im_color, dilated, eroded):
+    pass
+    
+    bg_cat = 1
+    fg_cat = 2
+    bg_cat_debug = 128
+    fg_cat_debug = 255
+    
+    img_size = im_color.shape
+    height = int(img_size[0])
+    width = int(img_size[1])
+
+    # create array with users annotations (same dimensions as image
+    bg_seeds_orig = np.zeros((height,width),dtype=int)
+    # seeds background
+    step_col = 5
+    step_row = 5
+    count = 0
+    for h in range(0,height,step_row):
+        for w in range(0,width,step_col):
+            bg_seeds_orig[h][w] = bg_cat
+            count = count + 1
+    print('count seed', count)    
+    # minus dilated
+    bg_seeds_orig = bg_seeds_orig - dilated
+    bg_seeds_orig[bg_seeds_orig < 0] = 0
+
+    # create array with users annotations (same dimensions as image)
+    fg_seeds_orig = np.zeros((height,width),dtype=int)
+    # seeds foreground
+    step_col = 3
+    step_row = 3
+    count = 0
+    for h in range(0,height,step_row):
+        for w in range(0,width,step_col):
+            fg_seeds_orig[h][w] = 1
+            count = count + 1
+    print('count seed', count)
+    fg_seeds_orig = fg_seeds_orig.astype(bool)
+    # minus negative of eroded
+    eroded = eroded.astype(bool)
+    fg_seeds_orig = np.logical_and(fg_seeds_orig, eroded)
+    fg_seeds_orig = fg_seeds_orig.astype(int)
+    fg_seeds_orig[fg_seeds_orig > 0] = fg_cat
+    
+    # combine
+    user_anns = fg_seeds_orig + bg_seeds_orig
+    
+    user_anns_debug = np.copy(user_anns)
+    user_anns_debug[user_anns_debug == bg_cat] = bg_cat_debug
+    user_anns_debug[user_anns_debug == fg_cat] = fg_cat_debug    
+    cv.imwrite('static/debug/'+'dummy1'+'/userannsdebug'+''+'.png', user_anns_debug)
+    
+    return user_anns
+    
 
 def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seeds=None):
     ts0 = time.time()
@@ -581,12 +689,24 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seed
     #    for y in x:
     #        if y[3] != 0:
     #            print(y)
-    
+
     #print(time.time() - ts1)
     ts2 = time.time()
     print('static/'+username+'/refined'+str(cnt)+'.png')
     cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
-    print('static/'+username+'/refined'+str(cnt)+'.png')
+    #print('static/'+username+'/refined'+str(cnt)+'.png')
+    
+    # call with seeds based on previous result
+    arr_seeds_2, user_anns_2 = createSeedsFromPrevResult(im_color)
+    num_sets_2 = 1
+    im_color, numSeed = main(username,img,user_anns_2,weight_,m,num_sets_2,border,arr_seeds_2,definite=True)
+
+    #print(time.time() - ts1)
+    ts2 = time.time()
+    print('static/'+username+'/r_enhanced'+str(cnt)+'.png')
+    cv.imwrite('static/'+username+'/r_enhanced'+str(cnt)+'.png', im_color)
+    #print('static/'+username+'/refined'+str(cnt)+'.png')
+    
     #print(time.time() - ts2)
     return ts2-ts1, numSeed
     
