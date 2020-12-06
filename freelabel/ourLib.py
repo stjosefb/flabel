@@ -582,7 +582,7 @@ def createSeedsFromPrevResult(im_color):
     #cv.imwrite('static/debug/'+'dummy1'+'/edgebg'+''+'.png', a)
     
     # cv erotion
-    kernel = np.ones((3,3),np.uint8)
+    kernel = np.ones((4,4),np.uint8)
     erotion = cv.erode(z,kernel,iterations = 1)
     cv.imwrite('static/debug/'+'dummy1'+'/erotion'+''+'.png', erotion)
     
@@ -643,8 +643,8 @@ def createUserAnnsFromPrevResult(im_color, dilated, eroded):
     # create array with users annotations (same dimensions as image)
     fg_seeds_orig = np.zeros((height,width),dtype=int)
     # seeds foreground
-    step_col = 3
-    step_row = 3
+    step_col = 4
+    step_row = 4
     count = 0
     for h in range(0,height,step_row):
         for w in range(0,width,step_col):
@@ -692,21 +692,28 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seed
 
     #print(time.time() - ts1)
     ts2 = time.time()
-    print('static/'+username+'/refined'+str(cnt)+'.png')
-    cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
+    print('static/'+username+'/r__refined'+str(cnt)+'.png')
+    cv.imwrite('static/'+username+'/r__refined'+str(cnt)+'.png', im_color)
     #print('static/'+username+'/refined'+str(cnt)+'.png')
     
-    # call with seeds based on previous result
-    arr_seeds_2, user_anns_2 = createSeedsFromPrevResult(im_color)
-    num_sets_2 = 1
-    im_color, numSeed = main(username,img,user_anns_2,weight_,m,num_sets_2,border,arr_seeds_2,definite=True)
+    if True:
+        # call with seeds based on previous result
+        arr_seeds_2, user_anns_2 = createSeedsFromPrevResult(im_color)
+        num_sets_2 = 1
+        im_color, numSeed = main(username,img,user_anns_2,weight_,m,num_sets_2,border,arr_seeds_2,definite=True)
+
+        #print(time.time() - ts1)
+        ts2 = time.time()
+        print('static/'+username+'/r__enhanced'+str(cnt)+'.png')
+        cv.imwrite('static/'+username+'/r__enhanced'+str(cnt)+'.png', im_color)
+        #print('static/'+username+'/refined'+str(cnt)+'.png')
 
     #print(time.time() - ts1)
     ts2 = time.time()
-    print('static/'+username+'/r_enhanced'+str(cnt)+'.png')
-    cv.imwrite('static/'+username+'/r_enhanced'+str(cnt)+'.png', im_color)
+    print('static/'+username+'/refined'+str(cnt)+'.png')
+    cv.imwrite('static/'+username+'/refined'+str(cnt)+'.png', im_color)
     #print('static/'+username+'/refined'+str(cnt)+'.png')
-    
+        
     #print(time.time() - ts2)
     return ts2-ts1, numSeed
     
