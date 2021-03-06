@@ -199,9 +199,9 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
     try:
         #print(arr_seeds)
         #print("p8")
-        definite = True
+        definite = False
         debug = False
-        single_process = True
+        single_process = False
         num_sets = 8
         cell_size = 1.333
         #cell_size = 4
