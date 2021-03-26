@@ -547,7 +547,7 @@ def refine3(request):
 
 
 def refine_crop(request):
-    refine2(request, True)
+    return refine2(request, True)
 		
 		
 def refine2(request, crop=False):
@@ -652,8 +652,8 @@ def refine2(request, crop=False):
                 'num_seed': numSeed,
             }
             if crop:
-                json_data['img_fg'] = my_string.decode('utf-8')	
-                json_data['img_bg'] = my_string.decode('utf-8')									
+                json_data['img_fg'] = 'data:image/png;base64,' + my_string.decode('utf-8')	
+                json_data['img_bg'] = 'data:image/png;base64,' + my_string.decode('utf-8')									
             response = JsonResponse(json_data)
         else:
             # open image
