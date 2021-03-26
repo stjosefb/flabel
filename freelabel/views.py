@@ -546,7 +546,11 @@ def refine3(request):
     return response
 
 
-def refine2(request):
+def refine_crop(request):
+    refine2(request, True)
+		
+		
+def refine2(request, crop=False):
     try:
         trace_width = None
         ts0 = time.time()
@@ -647,6 +651,9 @@ def refine2(request):
                 'num_pixel_trace': numPixelUserAnns,
                 'num_seed': numSeed,
             }
+            if crop:
+                json_data['img_fg'] = my_string.decode('utf-8')	
+                json_data['img_bg'] = my_string.decode('utf-8')									
             response = JsonResponse(json_data)
         else:
             # open image
