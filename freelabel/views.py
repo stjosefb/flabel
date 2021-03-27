@@ -621,6 +621,7 @@ def refine2(request, crop=False):
         #ar_img = bytearray(resp2.read())
         #print(len(ar_img))
         img = np.asarray(bytearray(resp.read()), dtype="uint8")  
+        #img_np = np.copy(img)
         #print(img.shape)  
         #print(img)
         #print(1)
@@ -651,7 +652,8 @@ def refine2(request, crop=False):
                 'num_pixel_trace': numPixelUserAnns,
                 'num_seed': numSeed,
             }
-            if crop:
+            if crop:                
+                img_fg, img_bg = crop_fg_bg(img_path, img)
                 json_data['img_fg'] = 'data:image/png;base64,' + my_string.decode('utf-8')	
                 json_data['img_bg'] = 'data:image/png;base64,' + my_string.decode('utf-8')									
             response = JsonResponse(json_data)
@@ -683,6 +685,26 @@ def refine2(request, crop=False):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
     
+    
+def crop_fg_bg(img_mask_path, img_url):
+    np_image = np.array(Image.open(ur.urlopen(url).read()))
+    np_mask = np.array(Image.open(img_mask_path))
+    
+    print(np_image.shape)
+    print(np_mask.shape)
+    opaque_idx = np.where(np_mask[:,:,3] == 255)
+    
+    np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+    #print(np_image_with_alpha[opaque_idx])
+    np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
+    
+    img_fg = Image.fromarray(np_mask)
+    
+    buffered = BytesIO()
+    img_fg.save(buffered, format="PNG")
+    img_fg_str = base64.b64encode(buffered.getvalue())    
+        
+    return img_fg_str, img_fg_str
 
 def cmpGT(request):
     username = request.user.username
