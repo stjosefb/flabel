@@ -31,6 +31,9 @@ import datetime, math
 import time
 import base64
 import cv2 as cv
+import io
+
+from PIL import Image
 
 # used to return numpy arrays via AJAX to JS side
 class NumpyEncoder(json.JSONEncoder):
@@ -653,9 +656,9 @@ def refine2(request, crop=False):
                 'num_seed': numSeed,
             }
             if crop:                
-                img_fg, img_bg = crop_fg_bg(img_path, img)
-                json_data['img_fg'] = 'data:image/png;base64,' + my_string.decode('utf-8')	
-                json_data['img_bg'] = 'data:image/png;base64,' + my_string.decode('utf-8')									
+                img_fg, img_bg = crop_fg_bg(img_path, url)
+                json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                json_data['img_bg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')									
             response = JsonResponse(json_data)
         else:
             # open image
@@ -687,25 +690,38 @@ def refine2(request, crop=False):
     
     
 def crop_fg_bg(img_mask_path, img_url):
-    np_image = np.array(Image.open(ur.urlopen(url).read()))
+    np_image = np.array(Image.open(ur.urlopen(img_url).read()))
     np_mask = np.array(Image.open(img_mask_path))
     
     print(np_image.shape)
     print(np_mask.shape)
     opaque_idx = np.where(np_mask[:,:,3] == 255)
     
-    np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+        
+    #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+    #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
     #print(np_image_with_alpha[opaque_idx])
-    np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
+    #np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
     
+    #h, w = np_image.shape
+    #z = np.zeros((h, w, 1), dtype=np_image.dtype)
+    #np_canvas = np.c_[np_image, z]    
+    np_canvas = np_image
+    np_canvas_with_alpha = np.insert(np_canvas, 3, values=255, axis=2)    
+    np_mask[opaque_idx] = np_canvas_with_alpha[opaque_idx] 
+        
     img_fg = Image.fromarray(np_mask)
+
+    #img_fg = Image.fromarray(np_canvas)
+    #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
     
-    buffered = BytesIO()
+    buffered = io.BytesIO()
     img_fg.save(buffered, format="PNG")
     img_fg_str = base64.b64encode(buffered.getvalue())    
         
     return img_fg_str, img_fg_str
 
+    
 def cmpGT(request):
     username = request.user.username
 
