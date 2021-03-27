@@ -658,7 +658,7 @@ def refine2(request, crop=False):
             if crop:                
                 img_fg, img_bg = crop_fg_bg(img_path, url)
                 json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
-                json_data['img_bg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')									
+                json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')									
             response = JsonResponse(json_data)
         else:
             # open image
