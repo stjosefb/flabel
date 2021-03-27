@@ -690,13 +690,13 @@ def refine2(request, crop=False):
     
     
 def crop_fg_bg(img_mask_path, img_url):
-    np_image = np.array(Image.open(ur.urlopen(img_url).read()))
+    np_image = np.array(Image.open(ur.urlopen(img_url)))
     np_mask = np.array(Image.open(img_mask_path))
     
-    print(np_image.shape)
-    print(np_mask.shape)
+    #print(np_image.shape)
+    #print(np_mask.shape)
     opaque_idx = np.where(np_mask[:,:,3] == 255)
-    
+    transparent_idx = np.where(np_mask[:,:,3] != 255)
         
     #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
     #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
@@ -706,11 +706,17 @@ def crop_fg_bg(img_mask_path, img_url):
     #h, w = np_image.shape
     #z = np.zeros((h, w, 1), dtype=np_image.dtype)
     #np_canvas = np.c_[np_image, z]    
-    np_canvas = np_image
+    # fg
+    np_canvas = np.copy(np_image)
     np_canvas_with_alpha = np.insert(np_canvas, 3, values=255, axis=2)    
     np_mask[opaque_idx] = np_canvas_with_alpha[opaque_idx] 
-        
+    
+    #bg
+    np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+    np_image_with_alpha[transparent_idx] = (255, 255, 255, 0)
+            
     img_fg = Image.fromarray(np_mask)
+    img_bg = Image.fromarray(np_image_with_alpha)
 
     #img_fg = Image.fromarray(np_canvas)
     #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
@@ -718,8 +724,12 @@ def crop_fg_bg(img_mask_path, img_url):
     buffered = io.BytesIO()
     img_fg.save(buffered, format="PNG")
     img_fg_str = base64.b64encode(buffered.getvalue())    
+    
+    buffered = io.BytesIO()
+    img_bg.save(buffered, format="PNG")
+    img_bg_str = base64.b64encode(buffered.getvalue())
         
-    return img_fg_str, img_fg_str
+    return img_fg_str, img_bg_str
 
     
 def cmpGT(request):
