@@ -696,7 +696,7 @@ def crop_fg_bg(img_mask_path, img_url):
     #print(np_image.shape)
     #print(np_mask.shape)
     opaque_idx = np.where(np_mask[:,:,3] == 255)
-    transparent_idx = np.where(np_mask[:,:,3] != 255)
+    #transparent_idx = np.where(np_mask[:,:,3] != 255)
         
     #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
     #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
@@ -713,7 +713,7 @@ def crop_fg_bg(img_mask_path, img_url):
     
     #bg
     np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
-    np_image_with_alpha[transparent_idx] = (255, 255, 255, 0)
+    np_image_with_alpha[opaque_idx] = (255, 255, 255, 0)
             
     img_fg = Image.fromarray(np_mask)
     img_bg = Image.fromarray(np_image_with_alpha)
