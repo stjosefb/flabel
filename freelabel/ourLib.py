@@ -316,6 +316,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None,singlep
         
         # temp solution
         if ignorebeyondboundary == '1':
+            h, w = anns.shape[:2]
             mask = np.zeros((h+2, w+2), np.uint8)
             #print(preSeg)
             cv.floodFill(preSeg, mask, (0,0), -1);
