@@ -568,6 +568,9 @@ def refine2(request, crop=False):
         #print(1)
         #print(time.time() - ts0)
 
+        singleprocess = request.POST.get('singleprocess','1')
+        ignorebeyondboundary = request.POST.get('ignorebeyondboundary','1')
+        
         # get coordinates of trace to be drawn
         traces = request.POST.getlist('trace[]')   
 
@@ -634,7 +637,9 @@ def refine2(request, crop=False):
         # call RGR and get mask as return
         time_0 = time.time()       
         #im_color = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
-        time_diff, numSeed = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border,arr_seeds)  
+        singleprocess = request.POST.get('singleprocess','1')
+        ignorebeyondboundary = request.POST.get('ignorebeyondboundary','1')        
+        time_diff, numSeed = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border,arr_seeds,singleprocess,ignorebeyondboundary)  
         time_1 = time.time()
         #print(5)
         #print(time.time() - ts0)        
@@ -1055,7 +1060,10 @@ def drawTrace(userAnns,traces, width=None):
             if width:
                 thick = width
             else:
-                thick = int(trace[i+2])
+                if (trace[3] == '1') and (trace[0]==trace[-4]) and (trace[1]==trace[-3]): # if background and polygon trace
+                    thick = 1
+                else:
+                    thick = int(trace[i+2])
             catId = int(trace[i+3])
         userAnns = tracePolyline(img,pts,catId,thick)    
 

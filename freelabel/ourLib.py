@@ -195,14 +195,18 @@ def regGrowing(area,numSamples,R_H,height,width,sz,preSeg,m,img_r,img_g,img_b,cl
     return_dict2[itSet] = np.count_nonzero(S)
     
 ########
-def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
+def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None,singleprocess='0',ignorebeyondboundary='0'):
     try:
         #print(arr_seeds)
         #print("p8")
         definite = False
         debug = False
-        single_process = False
+        if singleprocess == '0':
+            single_process = False
+        else:
+            single_process = True
         num_sets = 8
+		#num_sets = 1
         cell_size = 1.333
         #cell_size = 4
         is_border = False
@@ -291,6 +295,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
 
         # identify all high confidence pixels composing the RoI
         area = np.count_nonzero(RoI)
+        print('roi', area)
 
         # R_H is the high confidence region, the union of R_nB and R_F
         R_H = np.nonzero(RoI.flatten('F') > 0)
@@ -308,7 +313,14 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
             mask = np.zeros((h+2, w+2), np.uint8)
             if is_border:
                 cv.floodFill(preSeg, mask, (0,0), -1);
-            
+        
+        # temp solution
+        if ignorebeyondboundary == '1':
+            mask = np.zeros((h+2, w+2), np.uint8)
+            #print(preSeg)
+            cv.floodFill(preSeg, mask, (0,0), -1);
+            #print(preSeg)
+        
         preSeg = preSeg.flatten()
         #print(preSeg)
         #for p in preSeg:
@@ -464,7 +476,7 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None):
         return np.zeros(height, width, channels+1)
     
 
-def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seeds=None):
+def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seeds=None,singleprocess='0',ignorebeyondboundary='0'):
     ts0 = time.time()
     #print(time.time() - ts0)
 
@@ -476,7 +488,7 @@ def startRGR(username,imgnp,userAnns,cnt,weight_,m,num_sets=8,border='',arr_seed
     #print(time.time() - ts0)
     ts1 = time.time()
     
-    im_color, numSeed = main(username,img,userAnns,weight_,m,num_sets,border,arr_seeds)
+    im_color, numSeed = main(username,img,userAnns,weight_,m,num_sets,border,arr_seeds,singleprocess,ignorebeyondboundary)
     #print(type(im_color))
     #print(im_color.shape)
     #print(im_color)
