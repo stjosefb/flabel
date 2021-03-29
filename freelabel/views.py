@@ -712,7 +712,7 @@ def crop_fg_bg(img_mask_path, img_url):
     #z = np.zeros((h, w, 1), dtype=np_image.dtype)
     #np_canvas = np.c_[np_image, z]    
     # fg
-    #np_canvas = np.copy(np_image)
+    np_canvas = np.copy(np_image)
     if np_canvas.shape[2] == 3:
         np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
     np_mask[mask_idx] = np_canvas[mask_idx] 
