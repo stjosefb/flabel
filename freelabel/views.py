@@ -700,8 +700,8 @@ def crop_fg_bg(img_mask_path, img_url):
     
     #print(np_image.shape)
     #print(np_mask.shape)
-    opaque_idx = np.where(np_mask[:,:,3] == 255)
-    #transparent_idx = np.where(np_mask[:,:,3] != 255)
+    mask_idx = np.where(np_mask[:,:,3] == 255)
+    #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
         
     #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
     #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
@@ -712,16 +712,18 @@ def crop_fg_bg(img_mask_path, img_url):
     #z = np.zeros((h, w, 1), dtype=np_image.dtype)
     #np_canvas = np.c_[np_image, z]    
     # fg
-    np_canvas = np.copy(np_image)
-    np_canvas_with_alpha = np.insert(np_canvas, 3, values=255, axis=2)    
-    np_mask[opaque_idx] = np_canvas_with_alpha[opaque_idx] 
+    #np_canvas = np.copy(np_image)
+    if np_canvas.shape[2] == 3:
+        np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
+    np_mask[mask_idx] = np_canvas[mask_idx] 
     
     #bg
-    np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
-    np_image_with_alpha[opaque_idx] = (255, 255, 255, 0)
+    if np_image.shape[2] == 3:
+        np_image = np.insert(np_image, 3, values=255, axis=2)
+    np_image[mask_idx] = (255, 255, 255, 0)
             
     img_fg = Image.fromarray(np_mask)
-    img_bg = Image.fromarray(np_image_with_alpha)
+    img_bg = Image.fromarray(np_image)
 
     #img_fg = Image.fromarray(np_canvas)
     #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
