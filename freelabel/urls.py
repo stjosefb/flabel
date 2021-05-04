@@ -13,6 +13,7 @@ urlpatterns = [
     path('refine/', views.refine, name='refine'),
     path('refine2/', views.refine2, name='refine2'),
     path('refine3/', views.refine3, name='refine3'),
+    path('refine_crop/', views.refine_crop, name='refine_crop'),
     path('cmpGT/', views.cmpGT, name='cmpGT'),
     path('showFinalImg/', views.showFinalImg, name='showFinalImg'),
     path('writeLog/', views.writeLog, name='writeLog'),

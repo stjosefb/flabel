@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <queue>
 #include <cstring>
+#include <map>
  
 #include <iostream>
 #include <fstream>
@@ -163,6 +164,7 @@ void runSNIC(
     //-------------
     NODE tempnode;
     std::priority_queue<NODE, vector<NODE>, compare> pq;
+		std::map<unsigned int, double> dm;
     
     memset(labels,-1,sz*sizeof(int)); // labels all initialized with -1
 
@@ -261,11 +263,17 @@ void runSNIC(
                         tempnode.cl = cl;
                         tempnode.d = slicdist;
 
-                        // if(slicdist < 700)
-                        // {
-                        pq.push(tempnode); qlength++;
-                        // }
-                        
+												pq.push(tempnode); qlength++;
+												
+												/*auto pos = dm.find(tempnode.i);
+												if (tempnode.d < pos->second) {
+													// if(slicdist < 700)
+													// {
+													pq.push(tempnode); qlength++;
+													// }
+													
+													dm[tempnode.i] = tempnode.d;
+												}*/
                     }
                 }
             }
