@@ -223,6 +223,9 @@ def main(username,img,anns,weight_,m,num_sets=8,border='',arr_seeds=None,singlep
         # get image size, basically height and width
         height, width, channels = img.shape
         heightAnns, widthAnns = anns.shape
+        
+        #cell_size = 1.333 * (height/640) * (width/640)
+        print('cell size', cell_size)
 
         if(widthAnns != width):
             img = cv.resize(img, (widthAnns, heightAnns)) 

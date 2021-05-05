@@ -549,6 +549,58 @@ def refine3(request):
     return response
 
 
+def refine_by_superpixel(request, crop=False):
+    try:       
+        # params
+        url = request.POST.get('img')
+        is_base64 = request.POST.get('base64',0) == '1'
+        
+        # hardcoded
+        ID = 'fsh32_rev-zoom-1'
+        numSeed = 0
+        numPixelUserAnns = 0
+        time_diff = 0
+        username = 'dummy1'
+        
+        img_path = 'static/'+username+'/refined'+str(ID)+'.png'
+        #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
+        if is_base64:
+            #pass
+            with open(img_path, "rb") as img_file:
+                my_string = base64.b64encode(img_file.read())  
+            #print(my_string)
+            json_data = {
+                #'time': time_1-time_0,
+                'time': time_diff,
+                'imgbase64': 'data:image/png;base64,' + my_string.decode('utf-8'),
+                'num_pixel_trace': numPixelUserAnns,
+                'num_seed': numSeed,
+            }
+            if crop:                
+                img_fg, img_bg = crop_fg_bg(img_path, url)
+                json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
+                print(json_data)                
+            response = JsonResponse(json_data)
+        else:
+            image_data = open(img_path, "rb")
+            response = HttpResponse(image_data, content_type="image/png")
+            
+        #print(response)
+        
+        return response
+        
+        pass
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)    
+
+
+def refine_crop_by_superpixel(request):
+    return refine_by_superpixel(request, True)
+    
+    
 def refine_crop(request):
     return refine2(request, True)
 		
@@ -695,48 +747,55 @@ def refine2(request, crop=False):
     
     
 def crop_fg_bg(img_mask_path, img_url):
-    np_image = np.array(Image.open(ur.urlopen(img_url)))
-    np_mask = np.array(Image.open(img_mask_path))
-    
-    #print(np_image.shape)
-    #print(np_mask.shape)
-    mask_idx = np.where(np_mask[:,:,3] == 255)
-    #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
+    try:
+        np_image = np.array(Image.open(ur.urlopen(img_url)))
+        np_mask = np.array(Image.open(img_mask_path))
         
-    #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
-    #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
-    #print(np_image_with_alpha[opaque_idx])
-    #np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
-    
-    #h, w = np_image.shape
-    #z = np.zeros((h, w, 1), dtype=np_image.dtype)
-    #np_canvas = np.c_[np_image, z]    
-    # fg
-    np_canvas = np.copy(np_image)
-    if np_canvas.shape[2] == 3:
-        np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
-    np_mask[mask_idx] = np_canvas[mask_idx] 
-    
-    #bg
-    if np_image.shape[2] == 3:
-        np_image = np.insert(np_image, 3, values=255, axis=2)
-    np_image[mask_idx] = (255, 255, 255, 0)
+        #print(np_image.shape)
+        #print(np_mask.shape)
+        mask_idx = np.where(np_mask[:,:,3] == 255)
+        #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
             
-    img_fg = Image.fromarray(np_mask)
-    img_bg = Image.fromarray(np_image)
-
-    #img_fg = Image.fromarray(np_canvas)
-    #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
-    
-    buffered = io.BytesIO()
-    img_fg.save(buffered, format="PNG")
-    img_fg_str = base64.b64encode(buffered.getvalue())    
-    
-    buffered = io.BytesIO()
-    img_bg.save(buffered, format="PNG")
-    img_bg_str = base64.b64encode(buffered.getvalue())
+        #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+        #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
+        #print(np_image_with_alpha[opaque_idx])
+        #np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
         
-    return img_fg_str, img_bg_str
+        #h, w = np_image.shape
+        #z = np.zeros((h, w, 1), dtype=np_image.dtype)
+        #np_canvas = np.c_[np_image, z]    
+        # fg
+        np_canvas = np.copy(np_image)
+        if np_canvas.shape[2] == 3:
+            np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
+        np_mask[mask_idx] = np_canvas[mask_idx] 
+        
+        #bg
+        if np_image.shape[2] == 3:
+            np_image = np.insert(np_image, 3, values=255, axis=2)
+        np_image[mask_idx] = (255, 255, 255, 0)
+                
+        img_fg = Image.fromarray(np_mask)
+        img_bg = Image.fromarray(np_image)
+
+        #img_fg = Image.fromarray(np_canvas)
+        #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
+        
+        buffered = io.BytesIO()
+        img_fg.save(buffered, format="PNG")
+        img_fg_str = base64.b64encode(buffered.getvalue())    
+        
+        buffered = io.BytesIO()
+        img_bg.save(buffered, format="PNG")
+        img_bg_str = base64.b64encode(buffered.getvalue())
+            
+        return img_fg_str, img_bg_str
+        
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        return '', ''
 
     
 def cmpGT(request):
