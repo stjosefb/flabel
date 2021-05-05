@@ -35,6 +35,9 @@ import io
 
 from PIL import Image
 
+import method_superpixel as sp
+
+
 # used to return numpy arrays via AJAX to JS side
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -562,6 +565,8 @@ def refine_by_superpixel(request, crop=False):
         time_diff = 0
         username = 'dummy1'
         
+        img_superpixel_base64 = sp.create_superpixel(url)
+        
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         if is_base64:
@@ -578,9 +583,10 @@ def refine_by_superpixel(request, crop=False):
             }
             if crop:                
                 img_fg, img_bg = crop_fg_bg(img_path, url)
-                json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                #json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                json_data['img_fg'] = 'data:image/png;base64,' + img_superpixel_base64.decode('utf-8')	
                 json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
-                print(json_data)                
+                #print(json_data)                
             response = JsonResponse(json_data)
         else:
             image_data = open(img_path, "rb")
