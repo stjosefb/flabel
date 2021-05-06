@@ -1,32 +1,42 @@
 import callRGR
-import img_convert as ic
 import math
 import numpy as np
 import sys, os
 
+import img_convert as ic
+import superpixel_util as su
+
+
 def create_superpixel(url, m):
-    #print('create_superpixel')
-    
-    img_byte_arr = ic.img_url_to_bytearr(url)
-    #print('after img_url_to_bytearr')
-    
-    img_np = ic.img_bytearr_to_np(img_byte_arr)
-    #print(img_np)
-    #print(img_np.shape)
-    
-    img_sp_np = get_superpixel_snic(img_np, m)
-    
-    #img_pil = img_bytearr_to_pil(img_byte_arr)
-    #print('after img_bytearr_to_pil')
-    
-    #img_np = img_pil_to_np(img_pil)
-    img_pil = ic.img_np_to_pil(img_sp_np)
-    
-    #img_pil = img_np_to_pil(img_np)
-    img_base64 = ic.img_pil_to_base64(img_pil) 
-    #print('after img_pil_to_base64')
-    
-    return img_base64
+    try:
+        #print('create_superpixel')
+        
+        img_byte_arr = ic.img_url_to_bytearr(url)
+        #print('after img_url_to_bytearr')
+        
+        img_np = ic.img_bytearr_to_np(img_byte_arr)
+        #print(img_np)
+        #print(img_np.shape)
+        
+        psi_map = get_superpixel_snic(img_np, m)
+        
+        img_np_with_boundaries = su.draw_boundaries(img_np,psi_map)
+        
+        #img_pil = img_bytearr_to_pil(img_byte_arr)
+        #print('after img_bytearr_to_pil')
+        
+        #img_np = img_pil_to_np(img_pil)
+        img_pil = ic.img_np_to_pil(img_np_with_boundaries)
+        
+        #img_pil = img_np_to_pil(img_np)
+        img_base64 = ic.img_pil_to_base64(img_pil) 
+        #print('after img_pil_to_base64')
+        
+        return img_base64
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)    
 
 
 def get_superpixel_snic(img_np, m):
@@ -38,25 +48,29 @@ def get_superpixel_snic(img_np, m):
         img_g = img_np[:,:,1].flatten()
         img_r = img_np[:,:,0].flatten()    
         preSeg = np.int32(np.zeros((height,width))).flatten() # not used
-        num_superpixel = 200
+        num_superpixel = 400
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
+        m = 10
         
         # call RGR
-        print(type(img_r))
-        print(type(img_g))
-        print(type(img_b)) 
-        print(img_r.dtype)
-        print(img_g.dtype)
-        print(img_b.dtype)        
-        print(preSeg.astype(np.int32).shape)
-        print(S.astype(np.int32).shape)
-        print(width)
-        print(height)    
-        print(int(num_superpixel))
-        print(m)
-        print(RGRout.shape)
+        #print(type(img_r))
+        #print(type(img_g))
+        #print(type(img_b)) 
+        #print(img_r.dtype)
+        #print(img_g.dtype)
+        #print(img_b.dtype)        
+        #print(preSeg.astype(np.int32).shape)
+        #print(S.astype(np.int32).shape)
+        #print(width)
+        #print(height)    
+        #print(int(num_superpixel))
+        #print(m)
+        #print(RGRout.shape)
         out_ = callRGR.callRGR(img_r.astype(np.int32), img_g.astype(np.int32), img_b.astype(np.int32), preSeg.astype(np.int32), S.astype(np.int32), width, height, int(num_superpixel), m, RGRout.astype(np.int32))
-        #PsiMap = np.asarray(out_)
+        PsiMap = np.asarray(out_)
+        #print(PsiMap.shape)
+        PsiMap = np.reshape(PsiMap, (height, width), order='F')
+        #print(PsiMap)
         #print(PsiMap.shape)
 
     except Exception as e:
@@ -64,7 +78,7 @@ def get_superpixel_snic(img_np, m):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno) 
         
-    return img_np
+    return PsiMap
     
     
     
@@ -110,7 +124,7 @@ def get_snic_seeds(height,width,num_superpixel):
         #print(S.shape)
         
         # test save seeds as image
-        #ic.img_np_to_file(S, 'static/'+'dummy1'+'/superpixel_seeds'+''+'.png')
+        ic.img_np_to_file(S, 'static/'+'dummy1'+'/superpixel_seeds'+''+'.png')
         
         S = S.flatten(order='F')
         
