@@ -557,6 +557,7 @@ def refine_by_superpixel(request, crop=False):
         # params
         url = request.POST.get('img')
         is_base64 = request.POST.get('base64',0) == '1'
+        m = float(request.POST.get('m'))/10
         
         # hardcoded
         ID = 'fsh32_rev-zoom-1'
@@ -565,7 +566,7 @@ def refine_by_superpixel(request, crop=False):
         time_diff = 0
         username = 'dummy1'
         
-        img_superpixel_base64 = sp.create_superpixel(url)
+        img_superpixel_base64 = sp.create_superpixel(url, m)
         
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
