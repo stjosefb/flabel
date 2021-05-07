@@ -7,7 +7,10 @@ from PIL import Image
 
 
 # # BEGIN - MASK
-DICT_CLASS_COLOR = {0: (255,255,255,128), 1: (200,0,0,128)}	
+DICT_CLASS_COLOR = {
+    1: (255,255,255,128), 
+    2: (200,0,0,128),
+}	
 
 
 def drawMask(labels, dict_adaptel_classes, dict_label_pixels):
@@ -78,7 +81,7 @@ def select_adaptels(trace, labels):
 def create_traces_canvas(class_id, labels):
 	ht,wd = labels.shape
 	dict_canvas = {'class_id': class_id}
-	dict_canvas['canvas'] = np.zeros((ht, wd))
+	dict_canvas['canvas'] = np.zeros((ht, wd), dtype=np.float64)
 
 	return dict_canvas
 
@@ -87,7 +90,7 @@ def draw_trace_line(fg_traces, begin, end):
     try:
         y1,x1 = begin
         y2,x2 = end
-        print(y1, x1, y2, x2)
+        #print(y1, x1, y2, x2)
         rr, cc = line(y1, x1, y2, x2)
         fg_traces['canvas'][rr, cc] = 1
         
@@ -142,7 +145,14 @@ def create_label_pixels(labels,numlabels):
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)     
+        print(exc_type, fname, exc_tb.tb_lineno)   
+
+
+def create_dict_label_pos(dict_label_pixels):
+	dict_label_pos = {}
+	for label, pixels in dict_label_pixels.items():
+		dict_label_pos[label] = pixels[int(math.floor(len(pixels)/2))]
+	return dict_label_pos        
 # # END - ADAPTELS PIXELS	
 
 

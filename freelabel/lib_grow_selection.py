@@ -43,7 +43,10 @@ def grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color):
 	for label, list_class_info in dict_adaptel_classes.items():
 		if len(list_class_info) > 0:
 			dict_adaptel_class_classified[label] = list_class_info[0]['class_id']
-			
+            
+	print(dict_adaptel_class_classified)
+	print(dict_label_color)
+    
 	# init priority queue based on adaptels with known classes
 	for label_ref in dict_adaptel_class_classified:		
 		for label in adjacent_adaptels[label_ref]:
@@ -52,7 +55,8 @@ def grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color):
 				color_label_ref = dict_label_color[label_ref]
 				color_diff = norm_nd_sqr_arr(color_label, color_label_ref)
 				q_add(color_diff, [label_ref, label, dict_adaptel_class_classified[label_ref]])
-				
+				print(label_ref, label, dict_adaptel_class_classified[label_ref], color_diff)
+    
 	# process queue
 	while not q_empty():
 		item = q_pop()

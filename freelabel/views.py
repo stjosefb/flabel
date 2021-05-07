@@ -558,6 +558,7 @@ def refine_by_superpixel(request, crop=False):
         url = request.POST.get('img')
         is_base64 = request.POST.get('base64',0) == '1'
         m = float(request.POST.get('m'))/10
+        traces = request.POST.getlist('trace[]')
         
         # hardcoded
         ID = 'fsh32_rev-zoom-1'
@@ -566,7 +567,7 @@ def refine_by_superpixel(request, crop=False):
         time_diff = 0
         username = 'dummy1'
         
-        img_superpixel_base64, img_mask_base64  = sp.create_superpixel(url, m)
+        img_superpixel_base64, img_mask_base64, img_2_base64  = sp.create_superpixel(url, m, traces)
         
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
@@ -588,7 +589,7 @@ def refine_by_superpixel(request, crop=False):
                 #json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
                 json_data['img_fg'] = 'data:image/png;base64,' + img_superpixel_base64.decode('utf-8')	
                 #json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
-                json_data['img_bg'] = 'data:image/png;base64,' + img_mask_base64.decode('utf-8')
+                json_data['img_bg'] = 'data:image/png;base64,' + img_2_base64.decode('utf-8')
                 #print(json_data)                
             response = JsonResponse(json_data)
         else:

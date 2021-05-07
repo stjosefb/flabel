@@ -7,8 +7,10 @@ import lib_img_convert as ic
 import lib_superpixel_util as su
 import lib_grow_selection
 
+from PIL import Image
+from PIL import ImageDraw
 
-def create_superpixel(url, m):
+def create_superpixel(url, m, in_traces):
     try:
         #print('create_superpixel')
         
@@ -26,6 +28,8 @@ def create_superpixel(url, m):
         #print(labels.shape)
         #print(numlabels)
         dict_label_pixels = su.create_label_pixels(labels,numlabels)
+        # lokasi pada tiap area (label) untuk menempatkan tulisan
+        dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
         # average color
         dict_label_color = su.create_dict_label_color(dict_label_pixels, labimg)
         # graph of labels
@@ -33,15 +37,17 @@ def create_superpixel(url, m):
         
         # TRACES
         # draw foreground traces
-        fg_traces = su.create_traces_canvas(1, labels)
-        fg_traces = su.draw_trace_line(fg_traces, (240,260), (250,270))
+        #fg_traces = su.create_traces_canvas(1, labels)
+        #fg_traces = su.draw_trace_line(fg_traces, (240,260), (250,270))
         # draw background traces
-        bg_traces = su.create_traces_canvas(0, labels)
-        bg_traces = su.draw_trace_line(bg_traces, (10,0), (400,10))
-        bg_traces = su.draw_trace_line(bg_traces, (10,0), (20,400))
-        bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
+        #bg_traces = su.create_traces_canvas(0, labels)
+        #bg_traces = su.draw_trace_line(bg_traces, (10,0), (400,10))
+        #bg_traces = su.draw_trace_line(bg_traces, (10,0), (20,400))
+        #bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
         # draw traces
-        traces = [bg_traces, fg_traces]
+        #traces = [bg_traces, fg_traces]
+        traces = get_traces(in_traces, labels)
+        #print(traces)
         
         # LABEL CLASSIFICATION
         # classify selected labels
@@ -56,14 +62,17 @@ def create_superpixel(url, m):
         # TEST
         # TEST SHOW BOUNDARIES
         img_np_with_boundaries = draw_boundaries(img_np,labels)
+        img_np_boundaries = drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
         
         # RESULT
         img_pil = ic.img_np_to_pil(img_np_with_boundaries)
         img_base64 = ic.img_pil_to_base64(img_pil) 
         img_pil_mask = ic.img_np_to_pil(mask_img)
-        mask_base64 = ic.img_pil_to_base64(img_pil_mask)         
+        mask_base64 = ic.img_pil_to_base64(img_pil_mask)
+        img_pil_2 = ic.img_np_to_pil(img_np_boundaries)
+        img_base64_2 = ic.img_pil_to_base64(img_pil_2)         
         
-        return img_base64, mask_base64
+        return img_base64, mask_base64, img_base64_2
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -84,7 +93,7 @@ def get_superpixel_snic(img_np, m):
         preSeg = np.int32(np.zeros((height,width))).flatten() # not used
         num_superpixel = 800
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
-        m = 100
+        m = 10
         
         # call RGR
         #print(type(img_r))
@@ -105,9 +114,13 @@ def get_superpixel_snic(img_np, m):
         #print(lOut)
         #print(PsiMap.shape)
         PsiMap = np.reshape(PsiMap, (height, width), order='F')
-        l = np.reshape(lOut, (height, width), order='F')
-        a = np.reshape(aOut, (height, width), order='F')
-        b = np.reshape(bOut, (height, width), order='F')
+        l = np.reshape(lOut, (height, width), order='C')
+        a = np.reshape(aOut, (height, width), order='C')
+        b = np.reshape(bOut, (height, width), order='C')
+        #PsiMap = np.reshape(PsiMap, (width, height), order='C')
+        #l = np.reshape(lOut, (width, height), order='C')
+        #a = np.reshape(aOut, (width, height), order='C')
+        #b = np.reshape(bOut, (width, height), order='C')        
         #lab = np.dstack((l,a,b))
         lab = (l,a,b)
         #print(lab)
@@ -196,4 +209,71 @@ def draw_boundaries(img_np,labels):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)      
+
     
+def drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos={},is_draw_label=False):
+    try:    
+        #print(img_np.shape)
+        width, height = labels.shape
+
+        img = Image.new('RGBA', (width, height), (255, 255, 255, 0))
+        if is_draw_label:
+            d1 = ImageDraw.Draw(img)
+            for label, label_pos in dict_label_pos.items():
+                d1.text(label_pos[::-1], str(label), fill=(0, 0, 0))
+
+        img = np.array(img)
+
+        ht,wd = labels.shape
+
+        for y in range(1,ht-1):
+            for x in range(1,wd-1):
+                if labels[y,x-1] != labels[y,x+1] or labels[y-1,x] != labels[y+1,x]:
+                    img[y,x,:] = (255, 0, 0, 255)
+
+        return img
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+    
+def get_traces(in_traces,labels):   
+    traces = []
+    dict_canvas = dict()
+
+    for trace in in_traces:
+        trace_elmts = trace.split(',')
+        class_id = trace_elmts[-1]
+        if trace_elmts[-1] not in dict_canvas:
+            # create if not exist
+            canvas = su.create_traces_canvas(int(class_id), labels)
+            dict_canvas[class_id] = canvas
+        #if (trace_elmts[0]==trace_elmts[-4]) and (trace_elmts[1]==trace_elmts[-3]):
+            # polygon
+            #pass
+        #else:
+            # polyline
+            #pass
+        for i in range(0,len(trace_elmts)-5,4):
+            # draw
+            c0 = int(trace_elmts[i]) # i.e. x0
+            r0 = int(trace_elmts[i+1]) # i.e. y0                
+            c1 = int(trace_elmts[i+4])
+            r1 = int(trace_elmts[i+5])            
+            dict_canvas[class_id] = su.draw_trace_line(dict_canvas[class_id], (r0,c0), (r1,c1))
+        
+    # draw foreground traces
+    #fg_traces = su.create_traces_canvas(1, labels)
+    #fg_traces = su.draw_trace_line(fg_traces, (240,260), (250,270))
+    # draw background traces
+    #bg_traces = su.create_traces_canvas(0, labels)
+    #bg_traces = su.draw_trace_line(bg_traces, (10,0), (400,10))
+    #bg_traces = su.draw_trace_line(bg_traces, (10,0), (20,400))
+    #bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
+    # draw traces
+    #traces = [bg_traces, fg_traces]
+    
+    for canvas in dict_canvas:
+        traces.append(dict_canvas[canvas]);
+
+    return traces
