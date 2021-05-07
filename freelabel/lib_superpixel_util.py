@@ -8,7 +8,7 @@ from PIL import Image
 
 # # BEGIN - MASK
 DICT_CLASS_COLOR = {
-    1: (255,255,255,128), 
+    1: (255,255,255,255), 
     2: (200,0,0,128),
 }	
 

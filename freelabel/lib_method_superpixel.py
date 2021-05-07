@@ -17,6 +17,7 @@ def create_superpixel(url, m, in_traces):
         img_byte_arr = ic.img_url_to_bytearr(url)
         #print('after img_url_to_bytearr')
         
+        img_np_orig = ic.img_bytearr_to_np(img_byte_arr)
         img_np = ic.img_bytearr_to_np(img_byte_arr)
         #print(img_np)
         #print(img_np.shape)
@@ -65,14 +66,19 @@ def create_superpixel(url, m, in_traces):
         img_np_boundaries = drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
         
         # RESULT
-        img_pil = ic.img_np_to_pil(img_np_with_boundaries)
+        img_pil = ic.img_np_to_pil(img_np_orig)
         img_base64 = ic.img_pil_to_base64(img_pil) 
+        
         img_pil_mask = ic.img_np_to_pil(mask_img)
         mask_base64 = ic.img_pil_to_base64(img_pil_mask)
-        img_pil_2 = ic.img_np_to_pil(img_np_boundaries)
-        img_base64_2 = ic.img_pil_to_base64(img_pil_2)         
         
-        return img_base64, mask_base64, img_base64_2
+        img_pil_superpixel = ic.img_np_to_pil(img_np_with_boundaries)
+        img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
+        
+        img_pil_boundaries = ic.img_np_to_pil(img_np_boundaries)
+        img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)         
+        
+        return img_base64, mask_base64, img_base64_superpixel, img_base64_boundaries
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -93,7 +99,7 @@ def get_superpixel_snic(img_np, m):
         preSeg = np.int32(np.zeros((height,width))).flatten() # not used
         num_superpixel = 800
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
-        m = 10
+        m = 1
         
         # call RGR
         #print(type(img_r))
