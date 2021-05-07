@@ -396,3 +396,95 @@ extern "C" void RGRmain(int* rin, int* gin, int* bin, int* kclass, int* roi, int
 
     // return outlabels;
 }
+
+// Parameters: R, G, B, preSeg, S(centroids), width, height, no. of centroids, m
+
+extern "C" void RGRmain2(int* rin, int* gin, int* bin, int* kclass, int* roi, int width, int height, const int numk, double compactness, int* outlabels, double* lout, double* aout, double* bout)
+{
+
+    int sz = width*height;
+
+    //---------------------------
+    // Allocate memory
+    //---------------------------
+
+    double* lvec    = (double*)malloc( sizeof(double)      * sz ) ;
+    double* avec    = (double*)malloc( sizeof(double)      * sz ) ;
+    double* bvec    = (double*)malloc( sizeof(double)      * sz ) ;
+    int* klabels    = (int*)malloc( sizeof(int)         * sz ) ; // final labels (cluster ID)
+    
+    vector<int> roiList;   
+
+    //---------------------------
+    // Perform color conversion
+    //---------------------------
+
+    rgbtolab(rin,gin,bin,sz,lvec,avec,bvec);
+	for(int i = 0; i < sz; i++) {
+		lout[i] = lvec[i];
+		aout[i] = avec[i];
+		bout[i] = bvec[i];
+	}
+    for(int x = 0, ii = 0; x < width; x++)//reading data from column-major MATLAB matrics to row-major C matrices (i.e perform transpose)
+    {
+        for(int y = 0; y < height; y++)
+        {
+            int i = y*width+x;
+            // rin[i] = imgbytes[ii];
+            // gin[i] = imgbytes[ii+sz];
+            // bin[i] = imgbytes[ii+sz+sz];
+
+            // kclass[i] = prebytes[ii];
+            int roi_ = roi[ii];                    
+
+            if(roi_ > 0)
+            {
+				// koordinat x dan y dari seed diformat sedemikian rupa sehingga menjadi tipe data int
+                roiList.push_back(x << 16 | y);
+            }
+
+            ii++;
+        }
+    }
+
+    //---------------------------
+    // Compute superpixels
+    //---------------------------
+    int numklabels = 0;
+
+	// roiList: daftar seed
+	// klabels: output id centroid untuk tiap piksel (mulai dari 0)
+	// numk: jumlah sampel/centroid
+	// kclass: 
+    runSNIC(lvec,avec,bvec,width,height,klabels,kclass,roiList,&numklabels,numk,compactness);
+    
+    //---------------------------
+    // Assign output labels
+    //---------------------------
+
+    for(int x = 0, ii = 0; x < width; x++)//copying data from row-major C matrix to column-major MATLAB matrix (i.e. perform transpose)
+    {
+        for(int y = 0; y < height; y++)
+        {
+            int i = y*width+x;            
+            outlabels[ii] = klabels[i];
+            if(outlabels[ii] < 0)
+            {
+                outlabels[ii] = numklabels + 1;  // label yang memiliki nilai -1, nilainya dijadikan sebesar jumlah sampel + 1 (id centroid terakhir)
+            }
+            // outClasses[ii] = kclass[i];
+            ii++;
+        }
+    }    
+
+    //---------------------------
+    // Deallocate memory
+    //---------------------------
+    free(lvec);
+    free(avec);
+    free(bvec);
+    free(klabels);
+
+    // return outlabels;
+}
+
