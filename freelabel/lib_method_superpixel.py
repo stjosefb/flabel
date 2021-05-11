@@ -180,9 +180,9 @@ def get_snic_seeds(height,width,num_superpixel):
         
         y = halfstep
         rowstep = 0
-        while (y < height) and (n < num_superpixel):
+        while (y < height) and (n < num_superpixel_actual):
             x = halfstep
-            while (x < width) and (n < num_superpixel):
+            while (x < width) and (n < num_superpixel_actual):
                 if (y <= h-halfstep) and (x <= w-halfstep):
                     #print(y,x)
                     S[int(y),int(x)] = 255
