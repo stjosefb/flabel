@@ -40,7 +40,7 @@ def img_pil_to_base64(img_pil):
     
     
 def img_np_to_file(img_np, file_path):
-    print('img_np_to_file')
+    #print('img_np_to_file')
     try:
         #print(img_np)
         img_np2 = img_np.astype(np.uint8)

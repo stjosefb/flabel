@@ -3,6 +3,7 @@ import math
 import numpy as np
 import sys, os
 
+import lib_draw_superpixel as ds
 import lib_img_convert as ic
 import lib_superpixel_util as su
 import lib_grow_selection
@@ -62,8 +63,14 @@ def create_superpixel(url, m, in_traces):
         
         # TEST
         # TEST SHOW BOUNDARIES
-        img_np_with_boundaries = draw_boundaries(img_np,labels)
-        img_np_boundaries = drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+        img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
+        img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+        # test superpixels color
+        dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
+        #print(dict_label_color)
+        #print(dict_label_color)
+        #print(dict_label_color_rgb)
+        img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
         
         # RESULT
         img_pil = ic.img_np_to_pil(img_np_orig)
@@ -72,13 +79,16 @@ def create_superpixel(url, m, in_traces):
         img_pil_mask = ic.img_np_to_pil(mask_img)
         mask_base64 = ic.img_pil_to_base64(img_pil_mask)
         
-        img_pil_superpixel = ic.img_np_to_pil(img_np_with_boundaries)
+        img_pil_boundaries = ic.img_np_to_pil(img_np_with_boundaries)
+        img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)
+        
+        img_pil_labels = ic.img_np_to_pil(img_np_labels)
+        img_base64_labels = ic.img_pil_to_base64(img_pil_labels)         
+ 
+        img_pil_superpixel = ic.img_np_to_pil(img_np_sp_color)
         img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
-        
-        img_pil_boundaries = ic.img_np_to_pil(img_np_boundaries)
-        img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)         
-        
-        return img_base64, mask_base64, img_base64_superpixel, img_base64_boundaries
+  
+        return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -195,53 +205,6 @@ def get_snic_seeds(height,width,num_superpixel):
         print(exc_type, fname, exc_tb.tb_lineno)   
     return S, num_superpixel_actual        
     
-    
-def draw_boundaries(img_np,labels):
-    try:
-        #print(img_np.shape)
-        #print(img_np)
-        #img = Image.open(imgname)
-        #img = np.array(img)
-
-        ht,wd = labels.shape
-
-        for y in range(1,ht-1):
-            for x in range(1,wd-1):
-                if labels[y,x-1] != labels[y,x+1] or labels[y-1,x] != labels[y+1,x]:
-                    img_np[y,x,:] = 0
-
-        return img_np
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)      
-
-    
-def drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos={},is_draw_label=False):
-    try:    
-        #print(img_np.shape)
-        width, height = labels.shape
-
-        img = Image.new('RGBA', (width, height), (255, 255, 255, 0))
-        if is_draw_label:
-            d1 = ImageDraw.Draw(img)
-            for label, label_pos in dict_label_pos.items():
-                d1.text(label_pos[::-1], str(label), fill=(0, 0, 0))
-
-        img = np.array(img)
-
-        ht,wd = labels.shape
-
-        for y in range(1,ht-1):
-            for x in range(1,wd-1):
-                if labels[y,x-1] != labels[y,x+1] or labels[y-1,x] != labels[y+1,x]:
-                    img[y,x,:] = (255, 0, 0, 255)
-
-        return img
-    except Exception as e:
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)
     
 def get_traces(in_traces,labels):   
     traces = []
