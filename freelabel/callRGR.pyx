@@ -13,6 +13,7 @@ cimport numpy as np
 
 # declare the interface to the C code
 cdef extern void RGRmain(int* rin, int* gin, int* bin, int* kclass, int* roi, int width, int height, const int numk, double compactness, int* outlabels)
+cdef extern void RGRmain2(int* rin, int* gin, int* bin, int* kclass, int* roi, int width, int height, const int numk, double compactness, int* outlabels, double* lout, double* aout, double* bout)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -23,3 +24,11 @@ def callRGR(int[:] img_r, int[:] img_g, int[:] img_b, int[:] preSeg, int[:] S, w
     RGRmain (&img_r[0],&img_g[0],&img_b[0],&preSeg[0],&S[0],width,height,numSamples,m,&output[0])    
 
     return output
+	
+
+def callRGR2(int[:] img_r, int[:] img_g, int[:] img_b, int[:] preSeg, int[:] S, width, height, numSamples, m,
+            int[:] output, double[:] out_l, double[:] out_a, double[:] out_b):
+    
+    RGRmain2 (&img_r[0],&img_g[0],&img_b[0],&preSeg[0],&S[0],width,height,numSamples,m,&output[0],&out_l[0],&out_a[0],&out_b[0])    
+
+    return output, out_l, out_a, out_b	

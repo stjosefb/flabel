@@ -31,6 +31,12 @@ import datetime, math
 import time
 import base64
 import cv2 as cv
+import io
+
+from PIL import Image
+
+import lib_method_superpixel as sp
+
 
 # used to return numpy arrays via AJAX to JS side
 class NumpyEncoder(json.JSONEncoder):
@@ -546,7 +552,72 @@ def refine3(request):
     return response
 
 
-def refine2(request):
+def refine_by_superpixel(request, crop=False):
+    try:       
+        # params
+        url = request.POST.get('img')
+        is_base64 = request.POST.get('base64',0) == '1'
+        m = float(request.POST.get('m'))/10
+        traces = request.POST.getlist('trace[]')
+        
+        # hardcoded
+        ID = 'fsh32_rev-zoom-1'
+        numSeed = 0
+        numPixelUserAnns = 0
+        time_diff = 0
+        username = 'dummy1'
+        
+        img_base64, img_mask_base64, img_boundary_base64, img_label_base64, img_superpixel_base64  = sp.create_superpixel(url, m, traces)
+        
+        img_path = 'static/'+username+'/refined'+str(ID)+'.png'
+        #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
+        if is_base64:
+            #pass
+            with open(img_path, "rb") as img_file:
+                my_string = base64.b64encode(img_file.read())  
+            #print(my_string)
+            json_data = {
+                #'time': time_1-time_0,
+                'time': time_diff,
+                #'imgbase64': 'data:image/png;base64,' + my_string.decode('utf-8'),
+                'imgbase64': 'data:image/png;base64,' + img_mask_base64.decode('utf-8'),
+                'num_pixel_trace': numPixelUserAnns,
+                'num_seed': numSeed,
+            }
+            if crop:                
+                img_fg, img_bg = crop_fg_bg_2(img_mask_base64, img_base64)
+                #json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                json_data['img_fg'] = 'data:image/png;base64,' + img_superpixel_base64.decode('utf-8')	
+                #json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
+                #json_data['img_bg'] = 'data:image/png;base64,' + img_boundary_base64.decode('utf-8')
+                json_data['img_bg'] = 'data:image/png;base64,' + img_label_base64.decode('utf-8')
+                #print(json_data)                
+            response = JsonResponse(json_data)
+        else:
+            image_data = base64.b64decode(img_mask_base64)
+            #image_data = open(img_path, "rb")
+            response = HttpResponse(image_data, content_type="image/png")
+            
+        #print(response)
+        
+        return response
+        
+        pass
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)    
+
+
+def refine_crop_by_superpixel(request):
+    return refine_by_superpixel(request, True)
+    
+    
+def refine_crop(request):
+    return refine2(request, True)
+		
+		
+def refine2(request, crop=False):
     try:
         trace_width = None
         ts0 = time.time()
@@ -561,6 +632,9 @@ def refine2(request):
         #print(1)
         #print(time.time() - ts0)
 
+        singleprocess = request.POST.get('singleprocess','1')
+        ignorebeyondboundary = request.POST.get('ignorebeyondboundary','1')
+        
         # get coordinates of trace to be drawn
         traces = request.POST.getlist('trace[]')   
 
@@ -617,6 +691,7 @@ def refine2(request):
         #ar_img = bytearray(resp2.read())
         #print(len(ar_img))
         img = np.asarray(bytearray(resp.read()), dtype="uint8")  
+        #img_np = np.copy(img)
         #print(img.shape)  
         #print(img)
         #print(1)
@@ -626,7 +701,9 @@ def refine2(request):
         # call RGR and get mask as return
         time_0 = time.time()       
         #im_color = startRGR(username,img,userAnns,ID,weight_,m,num_sets)  
-        time_diff, numSeed = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border,arr_seeds)  
+        singleprocess = request.POST.get('singleprocess','1')
+        ignorebeyondboundary = request.POST.get('ignorebeyondboundary','1')        
+        time_diff, numSeed = startRGR(username,img,userAnns,ID,weight_,m,num_sets,border,arr_seeds,singleprocess,ignorebeyondboundary)  
         time_1 = time.time()
         #print(5)
         #print(time.time() - ts0)        
@@ -647,6 +724,10 @@ def refine2(request):
                 'num_pixel_trace': numPixelUserAnns,
                 'num_seed': numSeed,
             }
+            if crop:                
+                img_fg, img_bg = crop_fg_bg(img_path, url)
+                json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')									
             response = JsonResponse(json_data)
         else:
             # open image
@@ -676,7 +757,117 @@ def refine2(request):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
     
+    
+def crop_fg_bg(img_mask_path, img_url):
+    try:
+        np_image = np.array(Image.open(ur.urlopen(img_url)))
+        np_mask = np.array(Image.open(img_mask_path))
+        
+        #print(np_image.shape)
+        #print(np_mask.shape)
+        mask_idx = np.where(np_mask[:,:,3] == 255)
+        #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
+            
+        #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+        #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
+        #print(np_image_with_alpha[opaque_idx])
+        #np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
+        
+        #h, w = np_image.shape
+        #z = np.zeros((h, w, 1), dtype=np_image.dtype)
+        #np_canvas = np.c_[np_image, z]    
+        # fg
+        np_canvas = np.copy(np_image)
+        if np_canvas.shape[2] == 3:
+            np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
+        np_mask[mask_idx] = np_canvas[mask_idx] 
+        
+        #bg
+        if np_image.shape[2] == 3:
+            np_image = np.insert(np_image, 3, values=255, axis=2)
+        np_image[mask_idx] = (255, 255, 255, 0)
+                
+        img_fg = Image.fromarray(np_mask)
+        img_bg = Image.fromarray(np_image)
 
+        #img_fg = Image.fromarray(np_canvas)
+        #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
+        
+        buffered = io.BytesIO()
+        img_fg.save(buffered, format="PNG")
+        img_fg_str = base64.b64encode(buffered.getvalue())    
+        
+        buffered = io.BytesIO()
+        img_bg.save(buffered, format="PNG")
+        img_bg_str = base64.b64encode(buffered.getvalue())
+            
+        return img_fg_str, img_bg_str
+        
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        return '', ''
+
+
+def crop_fg_bg_2(img_mask_base64, img_base64):
+    try:
+        #print(img_base64)
+        img_base64_decoded = base64.b64decode(img_base64)
+        #print(img_base64_decoded)        
+        image = Image.open(io.BytesIO(img_base64_decoded))
+        np_image = np.array(image)
+        
+        img_mask_base64_decoded = base64.b64decode(img_mask_base64)
+        mask = Image.open(io.BytesIO(img_mask_base64_decoded))
+        np_mask = np.array(mask)
+        
+        #print(np_image.shape)
+        #print(np_mask.shape)
+        mask_idx = np.where(np_mask[:,:,3] == 255)
+        #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
+            
+        #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)
+        #np_image_with_alpha = np.insert(np_image, 0, values=[255,255,255], axis=1)
+        #print(np_image_with_alpha[opaque_idx])
+        #np_mask[opaque_idx] = np_image_with_alpha[opaque_idx]
+        
+        #h, w = np_image.shape
+        #z = np.zeros((h, w, 1), dtype=np_image.dtype)
+        #np_canvas = np.c_[np_image, z]    
+        # fg
+        np_canvas = np.copy(np_image)
+        if np_canvas.shape[2] == 3:
+            np_canvas = np.insert(np_canvas, 3, values=255, axis=2)    
+        np_mask[mask_idx] = np_canvas[mask_idx] 
+        
+        #bg
+        if np_image.shape[2] == 3:
+            np_image = np.insert(np_image, 3, values=255, axis=2)
+        np_image[mask_idx] = (255, 255, 255, 0)
+                
+        img_fg = Image.fromarray(np_mask)
+        img_bg = Image.fromarray(np_image)
+
+        #img_fg = Image.fromarray(np_canvas)
+        #np_canvas = np.zeros((h,w,3), dtype=np.uint8)
+        
+        buffered = io.BytesIO()
+        img_fg.save(buffered, format="PNG")
+        img_fg_str = base64.b64encode(buffered.getvalue())    
+        
+        buffered = io.BytesIO()
+        img_bg.save(buffered, format="PNG")
+        img_bg_str = base64.b64encode(buffered.getvalue())
+            
+        return img_fg_str, img_bg_str
+        
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        return '', ''
+    
 def cmpGT(request):
     username = request.user.username
 
@@ -1000,7 +1191,10 @@ def drawTrace(userAnns,traces, width=None):
             if width:
                 thick = width
             else:
-                thick = int(trace[i+2])
+                if (trace[3] == '1') and (trace[0]==trace[-4]) and (trace[1]==trace[-3]): # if background and polygon trace
+                    thick = 1
+                else:
+                    thick = int(trace[i+2])
             catId = int(trace[i+3])
         userAnns = tracePolyline(img,pts,catId,thick)    
 
