@@ -24,24 +24,31 @@ def create_superpixel(url, m, in_traces):
         #print(img_np.shape)
         
         # SUPERPIXEL
-        # snic
-        labels, numlabels, labimg = get_superpixel_snic(img_np, m)
-        # pixels in each label
-        #print(labels.shape)
-        #print(numlabels)
-        dict_label_pixels = su.create_label_pixels(labels,numlabels)
-        #print(dict_label_pixels)
-        # labels validation
-        if True:
-        #if False: 
-            labels, numlabels = su.validate_labels(labels,numlabels,dict_label_pixels)
-            dict_label_pixels = su.create_label_pixels(labels,numlabels)	
-        # lokasi pada tiap area (label) untuk menempatkan tulisan
-        dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
-        # average color
-        dict_label_color = su.create_dict_label_color(dict_label_pixels, labimg)
-        # graph of labels
-        adjacent_adaptels = su.get_adjacent_adaptels(labels,numlabels)
+        if False:
+            # restore from file
+            # ...
+            pass
+        else:
+            # snic
+            labels, numlabels, labimg = get_superpixel_snic(img_np, m)
+            # pixels in each label
+            #print(labels.shape)
+            #print(numlabels)
+            dict_label_pixels = su.create_label_pixels(labels,numlabels)
+            #print(dict_label_pixels)
+            # labels validation
+            #if True:
+            if False: 
+                labels, numlabels = su.validate_labels(labels,numlabels,dict_label_pixels)
+                dict_label_pixels = su.create_label_pixels(labels,numlabels)	
+            # lokasi pada tiap area (label) untuk menempatkan tulisan
+            dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
+            # average color
+            dict_label_color = su.create_dict_label_color(dict_label_pixels, labimg)
+            # graph of labels
+            adjacent_adaptels = su.get_adjacent_adaptels(labels,numlabels)
+            # save
+            # ...
         
         # TRACES
         # draw foreground traces

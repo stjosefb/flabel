@@ -188,18 +188,32 @@ def get_adjacent_adaptels(labels,numlabels):
 def get_adjacent_pixel_labels(y,x,labels):
     adjacent_pixel_labels = set()
     ht,wd = labels.shape            
-    if x < (wd - 1):                        
+    if x < (wd - 1):  # right                       
         if labels[y,x] != labels[y,x+1]:
             adjacent_pixel_labels.add(labels[y,x+1])
-    if x > 0:            
+    if x > 0:  # left            
         if labels[y,x] != labels[y,x-1]:
             adjacent_pixel_labels.add(labels[y,x-1])
-    if y < (ht - 1):                        
+    if y < (ht - 1):  # down                       
         if labels[y,x] != labels[y+1,x]:
             adjacent_pixel_labels.add(labels[y+1,x])
-    if y > 0:            
+    if y > 0:  # up            
         if labels[y,x] != labels[y-1,x]:
             adjacent_pixel_labels.add(labels[y-1,x])
+            
+    if x < (wd - 1) and y > 0:  # up right                       
+        if labels[y,x] != labels[y-1,x+1]:
+            adjacent_pixel_labels.add(labels[y-1,x+1])
+    if x > 0 and y > 0:  # up left          
+        if labels[y,x] != labels[y-1,x-1]:
+            adjacent_pixel_labels.add(labels[y-1,x-1])
+    if y < (ht - 1) and x < (wd - 1):  # down right                
+        if labels[y,x] != labels[y+1,x+1]:
+            adjacent_pixel_labels.add(labels[y+1,x+1])
+    if y > 0 and x > 0:  # down left
+        if labels[y,x] != labels[y-1,x-1]:
+            adjacent_pixel_labels.add(labels[y-1,x-1])
+            
     return adjacent_pixel_labels
 # # END - ADAPTELS ADJACENCY
     
