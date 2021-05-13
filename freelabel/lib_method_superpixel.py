@@ -53,11 +53,14 @@ def create_superpixel(url, m, in_traces):
         
         # LABEL CLASSIFICATION
         # classify selected labels
-        dict_adaptel_classes = su.find_adaptel_class(traces, labels, dict_label_pixels)  
+        dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
         # grow selection
-        dict_adaptel_classes = lib_grow_selection.grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color)
+        dict_adaptel_classes_temp, conflicting_classes = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
+        #print(conflicting_classes)
+        # resolve conflict
+        dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_classes)
         # get image mask	
-        mask_img = su.drawMask(labels, dict_adaptel_classes, dict_label_pixels)	
+        mask_img = su.drawMask(labels, dict_adaptel_classes_final, dict_label_pixels)	
         # save image mask
         #Image.fromarray(maskimg).save(mask_rslt)        
         
@@ -107,7 +110,9 @@ def get_superpixel_snic(img_np, m):
         img_g = img_np[:,:,1].flatten()
         img_r = img_np[:,:,0].flatten()    
         preSeg = np.int32(np.zeros((height,width))).flatten() # not used
-        num_superpixel = 800
+        #num_superpixel = 800
+        num_superpixel = int(width*height/327.5)
+        #print('num seed',num_superpixel)
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
         m = 1
         
