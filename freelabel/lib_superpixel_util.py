@@ -155,10 +155,16 @@ def create_label_pixels(labels,numlabels):
 
 
 def create_dict_label_pos(dict_label_pixels):
-    dict_label_pos = {}
-    for label, pixels in dict_label_pixels.items():
-        dict_label_pos[label] = pixels[int(math.floor(len(pixels)/2))]
-    return dict_label_pos        
+    try:
+        dict_label_pos = {}
+        #print(dict_label_pixels)
+        for label, pixels in dict_label_pixels.items():
+            dict_label_pos[label] = pixels[int(math.floor(len(pixels)/2))]
+        return dict_label_pos  
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)       
 # # END - ADAPTELS PIXELS    
 
 
@@ -196,4 +202,93 @@ def get_adjacent_pixel_labels(y,x,labels):
             adjacent_pixel_labels.add(labels[y-1,x])
     return adjacent_pixel_labels
 # # END - ADAPTELS ADJACENCY
+    
+    
+# # BEGIN - ADAPTELS VALIDATION    
+def validate_labels(labels,numlabels,dict_label_pixels):
+    validated_labels = labels
+    num_validated_labels = numlabels
+    
+    for label, pixels in dict_label_pixels.items():
+        # debug: check only adaptels 1
+        #if label == 1:
+        if True:
+        #if False: # feature not active, takes too much time to check for all labels
+            list_separated_pixels = validate_label(labels,numlabels,label,pixels)
+            if len(list_separated_pixels) > 0:
+                #num_validated_labels += len(list_separated_pixels)
+                validated_labels, num_validated_labels = update_labels(list_separated_pixels, validated_labels, num_validated_labels)
+    
+    return validated_labels,num_validated_labels
+    
+    
+def update_labels(list_separated_pixels, validated_labels, num_validated_labels):
+    for pixels in list_separated_pixels:
+        for pixel in pixels:
+            y,x = pixel
+            validated_labels[y,x] = num_validated_labels
+        num_validated_labels += 1
+        
+    return validated_labels, num_validated_labels
+
+    
+def validate_label(labels,numlabels,label,pixels):
+    list_separated_pixels = []
+
+    list_pixels_done = []
+    list_pixels_all = pixels
+    list_pixels_processing = []        
+
+    while len(list_pixels_all) > 0:
+        separated_pixels = []
+        
+        # set pixel to process
+        pixel_processed = list_pixels_all.pop(0)
+        list_pixels_processing.append(pixel_processed)        
+        while True:    
+            # set pixel to process
+            pixel_processed = list_pixels_processing.pop(0)            
+
+            # pixel processed
+            list_pixels_done.append(pixel_processed)
+            separated_pixels.append(pixel_processed)
+            #list_pixels_processing.remove(pixel_processed)
+            
+            # determine pixel candidates to process
+            list_adjacent_pixels = get_adjacent_pixels_with_same_label(labels, label, pixel_processed)
+            for adjacent_pixel in list_adjacent_pixels:
+                if adjacent_pixel not in list_pixels_done and adjacent_pixel not in list_pixels_processing:
+                    list_pixels_processing.append(adjacent_pixel)
+                if adjacent_pixel in list_pixels_all:
+                    list_pixels_all.remove(adjacent_pixel)
+                        
+            if len(list_pixels_processing) == 0:
+                break        
+            
+        if len(list_pixels_all) > 0:
+            list_separated_pixels.append(separated_pixels)
+    
+    return list_separated_pixels
+    
+    
+def get_adjacent_pixels_with_same_label(labels, label, pixel_processed):
+    list_adjacent_pixels = []
+    
+    ht,wd = labels.shape
+    y,x = pixel_processed
+    if y > 0:
+        if labels[y-1,x] == label:
+            list_adjacent_pixels.append((y-1,x))
+    if y < (ht - 1):            
+        if labels[y+1,x] == label:
+            list_adjacent_pixels.append((y+1,x))
+    if x > 0:            
+        if labels[y,x-1] == label:
+            list_adjacent_pixels.append((y,x-1))
+    if x < (wd - 1):                        
+        if labels[y,x+1] == label:
+            list_adjacent_pixels.append((y,x+1))        
+    return list_adjacent_pixels
+
+# # END - ADAPTELS VALIDATION
     

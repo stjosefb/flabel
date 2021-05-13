@@ -30,6 +30,12 @@ def create_superpixel(url, m, in_traces):
         #print(labels.shape)
         #print(numlabels)
         dict_label_pixels = su.create_label_pixels(labels,numlabels)
+        #print(dict_label_pixels)
+        # labels validation
+        if True:
+        #if False: 
+            labels, numlabels = su.validate_labels(labels,numlabels,dict_label_pixels)
+            dict_label_pixels = su.create_label_pixels(labels,numlabels)	
         # lokasi pada tiap area (label) untuk menempatkan tulisan
         dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
         # average color
@@ -56,7 +62,7 @@ def create_superpixel(url, m, in_traces):
         dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
         # grow selection
         dict_adaptel_classes_temp, conflicting_classes = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
-        #print(conflicting_classes)
+        print(conflicting_classes)
         # resolve conflict
         dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_classes)
         # get image mask	
