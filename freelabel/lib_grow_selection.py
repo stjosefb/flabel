@@ -99,7 +99,10 @@ def grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color):
 
 
 # # BEGIN - RESOLVE CONFLICTS
-def resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_classes):
+"""
+def resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_classes, traces):
     # TBD
+    
     return dict_adaptel_classes_temp
+"""
 # # END - RESOLVE CONFLICTS
