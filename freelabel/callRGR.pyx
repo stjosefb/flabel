@@ -32,3 +32,11 @@ def callRGR2(int[:] img_r, int[:] img_g, int[:] img_b, int[:] preSeg, int[:] S, 
     RGRmain2 (&img_r[0],&img_g[0],&img_b[0],&preSeg[0],&S[0],width,height,numSamples,m,&output[0],&out_l[0],&out_a[0],&out_b[0])    
 
     return output, out_l, out_a, out_b	
+
+
+def callRGR3(int[:] img_r, int[:] img_g, int[:] img_b, int[:] preSeg, int[:] S, width, height, numSamples, m,
+            int[:] output):
+    
+    RGRmain (&img_r[0],&img_g[0],&img_b[0],&preSeg[0],&S[0],width,height,numSamples,m,&output[0])    
+
+    return output, preSeg

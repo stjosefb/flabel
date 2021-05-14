@@ -28,7 +28,21 @@ def drawMask(labels, dict_adaptel_classes, dict_label_pixels):
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        print(exc_type, fname, exc_tb.tb_lineno)      
+        print(exc_type, fname, exc_tb.tb_lineno) 
+
+
+def drawMaskConflictingLabels(dict_class_indexes, mask_img):
+    try:
+        ht,wd,_ = mask_img.shape
+        
+        for _class, indexes in dict_class_indexes.items():
+            mask_img[indexes] = DICT_CLASS_COLOR[_class]
+        
+        return mask_img
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno) 
 # # END - MASK    
         
         

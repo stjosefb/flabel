@@ -74,9 +74,9 @@ def create_superpixel(url, m, in_traces):
         mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
         if len(conflicting_labels) > 0:
             # resolve conflict: get superpixel
-            dict_class_pixels = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
+            dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
             # draw image mask for conflicting centroids
-            #mask_img = su.drawMaskConflictingLabels(dict_class_pixels, mask_img)
+            mask_img = su.drawMaskConflictingLabels(dict_class_indexes, mask_img)
             #dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_labels, traces)        
         # save image mask
         #Image.fromarray(maskimg).save(mask_rslt)        
@@ -148,10 +148,10 @@ def get_superpixel_snic(img_np, m):
         #print(m)
         #print(RGRout.shape)
         #print(preSeg)
-        print(RGRout)
+        #print(RGRout)
         out_, _, _, _ = callRGR.callRGR2(img_r.astype(np.int32), img_g.astype(np.int32), img_b.astype(np.int32), preSeg.astype(np.int32), S.astype(np.int32), width, height, int(num_superpixel), m, RGRout.astype(np.int32), lOut, aOut, bOut)
         #print(preSeg)
-        print(RGRout)
+        #print(RGRout)
         PsiMap = np.asarray(out_)
         #print(lOut)
         #print(PsiMap.shape)
@@ -203,13 +203,23 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
         
         #print(num_superpixel)        
         #print(preSeg)
+        #print(np.where(preSeg == 2))
         #print(preSeg.astype(np.int32))
-        out_, _, _, _ = callRGR.callRGR2(img_r.astype(np.int32), img_g.astype(np.int32), img_b.astype(np.int32), preSeg.astype(np.int32), S.astype(np.int32), width, height, int(num_superpixel), m, RGRout.astype(np.int32), lOut, aOut, bOut)
-        #print(preSeg)
+        label_out_, class_out_ = callRGR.callRGR3(img_r.astype(np.int32), img_g.astype(np.int32), img_b.astype(np.int32), preSeg.astype(np.int32), S.astype(np.int32), width, height, int(num_superpixel), m, RGRout.astype(np.int32))
+        class_out = np.asarray(class_out_)
+        class_out = np.reshape(class_out, (height, width), order='C')
+        #print(class_out)
+        #print(np.where(class_out == 2))
     
-        dict_class_pixels = {}
+        dict_class_indexes = {}
+        for trace in traces:        
+            class_id = trace['class_id']
+            canvas = trace['canvas']
+            dict_class_indexes[class_id] = np.where(class_out == class_id)
+            #print(class_id)
+            #print(dict_class_indexes[class_id])
         
-        return dict_class_pixels
+        return dict_class_indexes
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
