@@ -586,11 +586,11 @@ def refine_by_superpixel(request, crop=False):
             }
             if crop:                
                 img_fg, img_bg = crop_fg_bg_2(img_mask_base64, img_base64)
-                #json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
-                json_data['img_fg'] = 'data:image/png;base64,' + img_superpixel_base64.decode('utf-8')	
-                #json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
+                json_data['img_fg'] = 'data:image/png;base64,' + img_fg.decode('utf-8')	
+                #json_data['img_fg'] = 'data:image/png;base64,' + img_superpixel_base64.decode('utf-8')	
+                json_data['img_bg'] = 'data:image/png;base64,' + img_bg.decode('utf-8')
                 #json_data['img_bg'] = 'data:image/png;base64,' + img_boundary_base64.decode('utf-8')
-                json_data['img_bg'] = 'data:image/png;base64,' + img_label_base64.decode('utf-8')
+                #json_data['img_bg'] = 'data:image/png;base64,' + img_label_base64.decode('utf-8')
                 #print(json_data)                
             response = JsonResponse(json_data)
         else:
@@ -824,7 +824,7 @@ def crop_fg_bg_2(img_mask_base64, img_base64):
         
         #print(np_image.shape)
         #print(np_mask.shape)
-        mask_idx = np.where(np_mask[:,:,3] == 255)
+        mask_idx = np.where(np_mask[:,:,3] == 128)
         #invert_mask_idx = np.where(np_mask[:,:,3] != 255)
             
         #np_image_with_alpha = np.insert(np_image, 3, values=255, axis=2)

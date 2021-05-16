@@ -31,7 +31,7 @@ def drawMask(labels, dict_adaptel_classes, dict_label_pixels):
         print(exc_type, fname, exc_tb.tb_lineno) 
 
 
-def drawMaskConflictingLabels(dict_class_indexes, mask_img):
+def drawMaskAdd(dict_class_indexes, mask_img):
     try:
         ht,wd,_ = mask_img.shape
         
