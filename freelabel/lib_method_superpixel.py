@@ -69,6 +69,7 @@ def create_superpixel(url, m, in_traces):
         dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
         # grow selection
         dict_adaptel_classes_temp, conflicting_labels, need_refinement_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
+        print(need_refinement_labels)
         #print(conflicting_labels)
         # get image mask	
         mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
@@ -135,9 +136,11 @@ def get_superpixel_snic(img_np, m):
         preSeg = np.int32(np.zeros((height,width))).flatten() # not used
         #num_superpixel = 800
         num_superpixel = int(width*height/327.5)
+        num_superpixel = 40  # test
         #print('num seed',num_superpixel)
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
         m = 1
+        m = 10  # test
         
         dict_centroid_center = get_dict_centroid_center(S,height,width)
         
