@@ -94,7 +94,9 @@ def grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color):
             dict_adaptel_class_classified[key] = []
             conflicting_classes.append(key)
     
-    return dict_adaptel_class_classified, conflicting_classes
+    need_refinement_labels = []
+    
+    return dict_adaptel_class_classified, conflicting_classes, need_refinement_labels
 # # END - GROW TRACES    
 
 

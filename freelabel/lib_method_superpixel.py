@@ -30,7 +30,7 @@ def create_superpixel(url, m, in_traces):
             pass
         else:
             # snic
-            labels, numlabels, labimg = get_superpixel_snic(img_np, m)
+            labels, numlabels, labimg, dict_centroid_center = get_superpixel_snic(img_np, m)
             # pixels in each label
             #print(labels.shape)
             #print(numlabels)
@@ -68,10 +68,12 @@ def create_superpixel(url, m, in_traces):
         # classify selected labels
         dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
         # grow selection
-        dict_adaptel_classes_temp, conflicting_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
+        dict_adaptel_classes_temp, conflicting_labels, need_refinement_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
         #print(conflicting_labels)
         # get image mask	
         mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
+        
+        # RESOLVE CONFLICT
         if len(conflicting_labels) > 0:
             # resolve conflict: get superpixel
             dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
@@ -79,7 +81,11 @@ def create_superpixel(url, m, in_traces):
             mask_img = su.drawMaskConflictingLabels(dict_class_indexes, mask_img)
             #dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_labels, traces)        
         # save image mask
-        #Image.fromarray(maskimg).save(mask_rslt)        
+        #Image.fromarray(maskimg).save(mask_rslt)
+        
+        # REFINE
+        #get_superpixel_snic_for_conflicting_labels()
+        
         
         # TEST
         # TEST SHOW BOUNDARIES
@@ -133,6 +139,8 @@ def get_superpixel_snic(img_np, m):
         S, num_superpixel = get_snic_seeds(height,width,num_superpixel)
         m = 1
         
+        dict_centroid_center = get_dict_centroid_center(S,height,width)
+        
         # call RGR
         #print(type(img_r))
         #print(type(img_g))
@@ -168,14 +176,14 @@ def get_superpixel_snic(img_np, m):
         #print(lab)
         #print(lab.shape)
         #print(PsiMap)
-        #print(PsiMap.shape)
+        #print(PsiMap.shape)        
 
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno) 
         
-    return PsiMap, np.amax(PsiMap)+1, lab
+    return PsiMap, np.amax(PsiMap)+1, lab, dict_centroid_center
     
     
 def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, dict_label_pixels, traces):
@@ -308,13 +316,19 @@ def get_snic_seeds(height,width,num_superpixel):
         # test save seeds as image
         #ic.img_np_to_file(S, 'static/'+'dummy1'+'/superpixel_seeds'+''+'.png')
         
+        #dict_centroid_center = {}
+        #indices = np.where(S == 255)
+        #print(indices)
+        #for key,index in enumerate(indices):
+        #    dict_centroid_center[key] = index        
+        
         S = S.flatten(order='F')
         
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)   
-    return S, num_superpixel_actual        
+    return S, num_superpixel_actual       
     
     
 def get_traces(in_traces,labels):   
@@ -357,3 +371,20 @@ def get_traces(in_traces,labels):
         traces.append(dict_canvas[canvas]);
 
     return traces
+    
+    
+def get_dict_centroid_center(S,height,width):
+    dict_centroid_center = {}
+    indices = np.where(S == 255)
+    #print(indices)
+    tup_coordinates = np.unravel_index(indices, (height,width), order='F')
+    #print(tup_coordinates)
+    ravelled = np.ravel(tup_coordinates, order='F')
+    #print(ravelled)
+    #print(len(ravelled)/2)
+    reshaped = ravelled.reshape((int(len(ravelled)/2), 2))
+    #print(reshaped)
+    for key,index in enumerate(reshaped):
+        dict_centroid_center[key] = index
+    #print(dict_centroid_center)
+    return dict_centroid_center
