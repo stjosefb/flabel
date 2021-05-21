@@ -2,6 +2,7 @@ import callRGR
 import math
 import numpy as np
 import sys, os
+import os.path
 
 import lib_draw_superpixel as ds
 import lib_img_convert as ic
@@ -10,9 +11,13 @@ import lib_grow_selection
 
 from PIL import Image
 from PIL import ImageDraw
+import pickle
 
-def create_superpixel(url, m, in_traces):
+
+def create_superpixel(url, m, in_traces, ID):
     try:
+        is_test = True
+    
         #print('create_superpixel')
         
         img_byte_arr = ic.img_url_to_bytearr(url)
@@ -24,10 +29,24 @@ def create_superpixel(url, m, in_traces):
         #print(img_np.shape)
         
         # SUPERPIXEL
-        if False:
+        is_save = True
+        npsavefile = 'static/'+'dummy1'+'/'+ID+'.npz'
+        picklesavefile = 'static/'+'dummy1'+'/'+ID+'.pkl'        
+        if os.path.isfile(npsavefile):
+            is_save = False
             # restore from file
-            # ...
-            pass
+            # restore numpy: labels
+            npzfile = np.load(npsavefile)
+            labels = npzfile['labels']
+            # restore others: numlabels, dict_label_pos, dict_label_color, adjacent_adaptels
+            with open(picklesavefile, 'rb') as f:  # Python 3: open(..., 'rb')
+                dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels = pickle.load(f)
+            if is_test:
+                if not dict_label_pos:
+                    dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
+                    is_save = True
+            #print(labels)
+            #print(dict_label_pixels)
         else:
             # snic
             labels, numlabels, labimg, dict_centroid_center = get_superpixel_snic(img_np, m)
@@ -42,13 +61,22 @@ def create_superpixel(url, m, in_traces):
                 labels, numlabels = su.validate_labels(labels,numlabels,dict_label_pixels)
                 dict_label_pixels = su.create_label_pixels(labels,numlabels)	
             # lokasi pada tiap area (label) untuk menempatkan tulisan
-            dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
+            if is_test:
+                dict_label_pos = su.create_dict_label_pos(dict_label_pixels)
+            else:
+                dict_label_pos = {}
             # average color
             dict_label_color = su.create_dict_label_color(dict_label_pixels, labimg)
             # graph of labels
             adjacent_adaptels = su.get_adjacent_adaptels(labels,numlabels)
+            
+        if is_save:
             # save
-            # ...
+            # save numpy: labels
+            np.savez(npsavefile, labels=labels)
+            # save others: numlabels, dict_label_pos, dict_label_color, adjacent_adaptels
+            with open(picklesavefile, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump([dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels], f)
         
         # TRACES
         # draw foreground traces
@@ -89,16 +117,17 @@ def create_superpixel(url, m, in_traces):
             dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
             mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
         
-        # TEST
-        # TEST SHOW BOUNDARIES
-        img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
-        img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
-        # test superpixels color
-        dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
-        #print(dict_label_color)
-        #print(dict_label_color)
-        #print(dict_label_color_rgb)
-        img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
+        # TEST        
+        if is_test:
+            # TEST SHOW BOUNDARIES
+            img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
+            img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+            # test superpixels color
+            dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
+            #print(dict_label_color)
+            #print(dict_label_color)
+            #print(dict_label_color_rgb)
+            img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
         
         # RESULT
         img_pil = ic.img_np_to_pil(img_np_orig)
@@ -107,14 +136,17 @@ def create_superpixel(url, m, in_traces):
         img_pil_mask = ic.img_np_to_pil(mask_img)
         mask_base64 = ic.img_pil_to_base64(img_pil_mask)
         
-        img_pil_boundaries = ic.img_np_to_pil(img_np_with_boundaries)
-        img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)
-        
-        img_pil_labels = ic.img_np_to_pil(img_np_labels)
-        img_base64_labels = ic.img_pil_to_base64(img_pil_labels)         
- 
-        img_pil_superpixel = ic.img_np_to_pil(img_np_sp_color)
-        img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
+        if is_test:
+            img_pil_boundaries = ic.img_np_to_pil(img_np_with_boundaries)
+            img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)
+            
+            img_pil_labels = ic.img_np_to_pil(img_np_labels)
+            img_base64_labels = ic.img_pil_to_base64(img_pil_labels)         
+     
+            img_pil_superpixel = ic.img_np_to_pil(img_np_sp_color)
+            img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
+        else:
+            img_base64_boundaries = img_base64_labels = img_base64_superpixel = mask_base64 
   
         return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel
     except Exception as e:

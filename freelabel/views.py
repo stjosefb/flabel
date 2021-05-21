@@ -561,13 +561,14 @@ def refine_by_superpixel(request, crop=False):
         traces = request.POST.getlist('trace[]')
         
         # hardcoded
-        ID = 'fsh32_rev-zoom-1'
+        ID = request.POST.get('ID')
+        #ID = 'fsh32_rev-zoom-1'
         numSeed = 0
         numPixelUserAnns = 0
         time_diff = 0
         username = 'dummy1'
         
-        img_base64, img_mask_base64, img_boundary_base64, img_label_base64, img_superpixel_base64  = sp.create_superpixel(url, m, traces)
+        img_base64, img_mask_base64, img_boundary_base64, img_label_base64, img_superpixel_base64  = sp.create_superpixel(url, m, traces, ID)
         
         img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
