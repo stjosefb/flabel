@@ -568,14 +568,14 @@ def refine_by_superpixel(request, crop=False):
         time_diff = 0
         username = 'dummy1'
         
-        img_base64, img_mask_base64, img_boundary_base64, img_label_base64, img_superpixel_base64  = sp.create_superpixel(url, m, traces, ID)
+        img_base64, img_mask_base64, img_boundary_base64, img_label_base64, img_superpixel_base64, time_diff  = sp.create_superpixel(url, m, traces, ID)
         
-        img_path = 'static/'+username+'/refined'+str(ID)+'.png'
+        #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         #img_path = 'static/'+username+'/refined'+str(ID)+'.png'
         if is_base64:
             #pass
-            with open(img_path, "rb") as img_file:
-                my_string = base64.b64encode(img_file.read())  
+            #with open(img_path, "rb") as img_file:
+                #my_string = base64.b64encode(img_file.read())  
             #print(my_string)
             json_data = {
                 #'time': time_1-time_0,
