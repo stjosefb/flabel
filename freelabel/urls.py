@@ -14,6 +14,7 @@ urlpatterns = [
     path('refine2/', views.refine2, name='refine2'),
     path('refine3/', views.refine3, name='refine3'),
     path('refine_crop/', views.refine_crop, name='refine_crop'),
+    path('init_refine_by_superpixel/', views.init_refine_by_superpixel, name='init_refine_by_superpixel'),
     path('refine_by_superpixel/', views.refine_by_superpixel, name='refine_by_superpixel'),
     path('refine_crop_by_superpixel/', views.refine_crop_by_superpixel, name='refine_crop_by_superpixel'),
     path('cmpGT/', views.cmpGT, name='cmpGT'),

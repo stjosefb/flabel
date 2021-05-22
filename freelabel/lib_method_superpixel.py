@@ -17,7 +17,7 @@ import pickle
 import time
 
 
-def create_superpixel(url, m, in_traces, ID):
+def create_superpixel(url, m, in_traces, ID, init_only=False):
     try:
         ts0 = time.time()
         is_test = True
@@ -27,7 +27,9 @@ def create_superpixel(url, m, in_traces, ID):
         img_byte_arr = ic.img_url_to_bytearr(url)
         #print('after img_url_to_bytearr')
         
-        img_np_orig = ic.img_bytearr_to_np(img_byte_arr)
+        if not init_only:
+            img_np_orig = ic.img_bytearr_to_np(img_byte_arr)
+        
         img_np = ic.img_bytearr_to_np(img_byte_arr)
         #print(img_np)
         #print(img_np.shape)
@@ -82,80 +84,81 @@ def create_superpixel(url, m, in_traces, ID):
             with open(picklesavefile, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump([dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels], f)
         
-        # TRACES
-        # draw foreground traces
-        #fg_traces = su.create_traces_canvas(1, labels)
-        #fg_traces = su.draw_trace_line(fg_traces, (240,260), (250,270))
-        # draw background traces
-        #bg_traces = su.create_traces_canvas(0, labels)
-        #bg_traces = su.draw_trace_line(bg_traces, (10,0), (400,10))
-        #bg_traces = su.draw_trace_line(bg_traces, (10,0), (20,400))
-        #bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
-        # draw traces
-        #traces = [bg_traces, fg_traces]
-        traces = get_traces(in_traces, labels)
-        #print(traces)
-        
-        # LABEL CLASSIFICATION
-        # classify selected labels
-        dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
-        # grow selection
-        dict_adaptel_classes_temp, conflicting_labels, need_refinement_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
-        #print(need_refinement_labels)
-        #print(conflicting_labels)
-        # get image mask	
-        mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
-        #print(conflicting_labels)
-        # RESOLVE CONFLICT
-        if len(conflicting_labels) > 0:
-            # resolve conflict: get superpixel
-            dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
-            #print(dict_class_indexes)
-            # draw image mask for conflicting centroids
-            mask_img = su.drawMaskAdd(dict_class_indexes, mask_img)
-            #dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_labels, traces)        
-        # save image mask
-        #Image.fromarray(maskimg).save(mask_rslt)
-        
-        # REFINE
-        if len(need_refinement_labels) > 0:
-            dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
-            mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
-        
-        # TEST        
-        if is_test:
-            # TEST SHOW BOUNDARIES
-            img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
-            img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
-            # test superpixels color
-            dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
-            #print(dict_label_color)
-            #print(dict_label_color)
-            #print(dict_label_color_rgb)
-            img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
-        
-        # RESULT
-        img_pil = ic.img_np_to_pil(img_np_orig)
-        img_base64 = ic.img_pil_to_base64(img_pil) 
-        
-        img_pil_mask = ic.img_np_to_pil(mask_img)
-        mask_base64 = ic.img_pil_to_base64(img_pil_mask)
-        
-        if is_test:
-            img_pil_boundaries = ic.img_np_to_pil(img_np_with_boundaries)
-            img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)
+        if not init_only:
+            # TRACES
+            # draw foreground traces
+            #fg_traces = su.create_traces_canvas(1, labels)
+            #fg_traces = su.draw_trace_line(fg_traces, (240,260), (250,270))
+            # draw background traces
+            #bg_traces = su.create_traces_canvas(0, labels)
+            #bg_traces = su.draw_trace_line(bg_traces, (10,0), (400,10))
+            #bg_traces = su.draw_trace_line(bg_traces, (10,0), (20,400))
+            #bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
+            # draw traces
+            #traces = [bg_traces, fg_traces]
+            traces = get_traces(in_traces, labels)
+            #print(traces)
             
-            img_pil_labels = ic.img_np_to_pil(img_np_labels)
-            img_base64_labels = ic.img_pil_to_base64(img_pil_labels)         
-     
-            img_pil_superpixel = ic.img_np_to_pil(img_np_sp_color)
-            img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
-        else:
-            img_base64_boundaries = img_base64_labels = img_base64_superpixel = mask_base64 
-  
-        ts1 = time.time()
-        time_diff = ts1 - ts0
-        return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel, time_diff
+            # LABEL CLASSIFICATION
+            # classify selected labels
+            dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
+            # grow selection
+            dict_adaptel_classes_temp, conflicting_labels, need_refinement_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
+            #print(need_refinement_labels)
+            #print(conflicting_labels)
+            # get image mask	
+            mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
+            #print(conflicting_labels)
+            # RESOLVE CONFLICT
+            if len(conflicting_labels) > 0:
+                # resolve conflict: get superpixel
+                dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
+                #print(dict_class_indexes)
+                # draw image mask for conflicting centroids
+                mask_img = su.drawMaskAdd(dict_class_indexes, mask_img)
+                #dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_labels, traces)        
+            # save image mask
+            #Image.fromarray(maskimg).save(mask_rslt)
+            
+            # REFINE
+            if len(need_refinement_labels) > 0:
+                dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
+                #mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
+            
+            # TEST        
+            if is_test:
+                # TEST SHOW BOUNDARIES
+                img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
+                img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+                # test superpixels color
+                dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
+                #print(dict_label_color)
+                #print(dict_label_color)
+                #print(dict_label_color_rgb)
+                img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
+            
+            # RESULT
+            img_pil = ic.img_np_to_pil(img_np_orig)
+            img_base64 = ic.img_pil_to_base64(img_pil) 
+            
+            img_pil_mask = ic.img_np_to_pil(mask_img)
+            mask_base64 = ic.img_pil_to_base64(img_pil_mask)
+            
+            if is_test:
+                img_pil_boundaries = ic.img_np_to_pil(img_np_with_boundaries)
+                img_base64_boundaries = ic.img_pil_to_base64(img_pil_boundaries)
+                
+                img_pil_labels = ic.img_np_to_pil(img_np_labels)
+                img_base64_labels = ic.img_pil_to_base64(img_pil_labels)         
+         
+                img_pil_superpixel = ic.img_np_to_pil(img_np_sp_color)
+                img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
+            else:
+                img_base64_boundaries = img_base64_labels = img_base64_superpixel = mask_base64 
+      
+            ts1 = time.time()
+            time_diff = ts1 - ts0
+            return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel, time_diff
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -316,7 +319,7 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
                     #if idx in [1]:
                     if True:
                         #print(type(dict_class_indexes_tmp[key][0]))
-                        print(idx, dict_class_indexes_tmp[key][0].shape)
+                        #print(idx, dict_class_indexes_tmp[key][0].shape)
                         if key not in dict_class_indexes:
                             #print(idx, key, 'if')
                             dict_class_indexes[key] = dict_class_indexes_tmp[key]

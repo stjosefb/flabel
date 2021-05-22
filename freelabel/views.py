@@ -552,6 +552,34 @@ def refine3(request):
     return response
 
 
+def init_refine_by_superpixel(request):
+    try:       
+        # params
+        url = request.POST.get('img')
+        m = 0  # not used
+        traces = []  # not used
+        ID = request.POST.get('ID')
+        
+        
+        time_0 = time.time()
+        sp.create_superpixel(url, m, traces, ID)
+        time_1 = time.time()
+        time_diff = time_1-time_0
+        
+        json_data = {
+            'time': time_diff,
+        }
+        response = JsonResponse(json_data)
+        
+        return response
+        
+        pass
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)    
+    
+
 def refine_by_superpixel(request, crop=False):
     try:       
         # params
@@ -559,9 +587,9 @@ def refine_by_superpixel(request, crop=False):
         is_base64 = request.POST.get('base64',0) == '1'
         m = float(request.POST.get('m'))/10
         traces = request.POST.getlist('trace[]')
+        ID = request.POST.get('ID')
         
         # hardcoded
-        ID = request.POST.get('ID')
         #ID = 'fsh32_rev-zoom-1'
         numSeed = 0
         numPixelUserAnns = 0
