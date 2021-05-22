@@ -9,6 +9,7 @@ import lib_img_convert as ic
 import lib_superpixel_util as su
 import lib_grow_selection
 import lib_refinement
+import lib_resolve_conflict
 
 from PIL import Image
 from PIL import ImageDraw
@@ -104,11 +105,12 @@ def create_superpixel(url, m, in_traces, ID):
         #print(conflicting_labels)
         # get image mask	
         mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
-        
+        #print(conflicting_labels)
         # RESOLVE CONFLICT
         if len(conflicting_labels) > 0:
             # resolve conflict: get superpixel
             dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
+            #print(dict_class_indexes)
             # draw image mask for conflicting centroids
             mask_img = su.drawMaskAdd(dict_class_indexes, mask_img)
             #dict_adaptel_classes_final = lib_grow_selection.resolve_selection_conflict(dict_adaptel_classes_temp, conflicting_labels, traces)        
@@ -236,17 +238,18 @@ def get_superpixel_snic_for_refinement(img_np, m, need_refinement_labels, dict_l
         if is_per_label:
             for need_refinement_label in need_refinement_labels:
                 dict_class_indexes_tmp = lib_refinement.get_refined_dict_class_indexes(img_np, m, [need_refinement_label], dict_label_pixels, traces)
-                print(dict_class_indexes_tmp)                
-                print('')
+                #print(dict_class_indexes_tmp)                
+                #print('')
                 for key in dict_class_indexes_tmp:
-                    print(type(dict_class_indexes_tmp[key][0]))
+                    #print(type(dict_class_indexes_tmp[key][0]))
                     if key not in dict_class_indexes:
                         dict_class_indexes[key] = dict_class_indexes_tmp[key]
                     else:
-                        np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
-                        np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
                         #dict_class_indexes[key][0].append(dict_class_indexes_tmp[key][0])
                         #dict_class_indexes[key][1].append(dict_class_indexes_tmp[key][1])
+                        tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
+                        tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
+                        dict_class_indexes[key] = (tup_y, tup_x)                        
         else:
             dict_class_indexes = lib_refinement.get_refined_dict_class_indexes(img_np, m, need_refinement_labels, dict_label_pixels, traces)
             """
@@ -296,6 +299,41 @@ def get_superpixel_snic_for_refinement(img_np, m, need_refinement_labels, dict_l
     
 def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, dict_label_pixels, traces):
     try:
+        dict_class_indexes = {}
+        
+        is_per_label = True
+        if is_per_label:
+            for idx, conflicting_label in enumerate(conflicting_labels):
+                dict_class_indexes_tmp = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, [conflicting_label], dict_label_pixels, traces)
+                #print(dict_class_indexes_tmp)                
+                #print('')
+                #dict_class_indexes = dict_class_indexes_tmp
+                #if idx == 1:
+                #    break
+                #break
+                for key in dict_class_indexes_tmp:
+                    #if idx == 2:
+                    #if idx in [1]:
+                    if True:
+                        #print(type(dict_class_indexes_tmp[key][0]))
+                        print(idx, dict_class_indexes_tmp[key][0].shape)
+                        if key not in dict_class_indexes:
+                            #print(idx, key, 'if')
+                            dict_class_indexes[key] = dict_class_indexes_tmp[key]
+                        else:
+                            #print(idx, key, 'else')
+                            tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
+                            tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
+                            dict_class_indexes[key] = (tup_y, tup_x)
+                            #dict_class_indexes[key][0].append(dict_class_indexes_tmp[key][0])
+                            #dict_class_indexes[key][1].append(dict_class_indexes_tmp[key][1])
+                        #break
+            #print(dict_class_indexes[1][0].shape)
+            #print(dict_class_indexes[2][0].shape)
+        else:
+            dict_class_indexes = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, conflicting_labels, dict_label_pixels, traces)    
+        
+        """
         #labels_, numlabels_, labimg_ = None
         
         height, width, channels = img_np.shape
@@ -334,50 +372,13 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
             dict_class_indexes[class_id] = np.where(class_out == class_id)
             #print(class_id)
             #print(dict_class_indexes[class_id])
+        """
         
         return dict_class_indexes
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)     
-
-
-def get_snic_seeds_for_conflicting_labels(height,width,conflicting_labels, dict_label_pixels, traces):
-    # init with -1 (centroids will not expand to these pixels)
-    S = np.full((height, width), -1)
-    #S = np.full((height, width), 255)  # test
-    canvas_conflicting_labels = np.full((height, width), 0)
-    
-    # set conflicting areas as 0 (centroids will expand to these pixels)
-    for conflicting_label in conflicting_labels:
-        #print(conflicting_label)
-        for pixel in dict_label_pixels[conflicting_label]:
-            h,w = pixel
-            S[h,w] = 0
-            #S[h,w] = 128  # test
-            canvas_conflicting_labels[h,w] = 1
-    
-    # set traces on conflicting areas based on class id (centroid will expand from these pixels)
-    for trace in traces:        
-        class_id = trace['class_id']
-        canvas = trace['canvas']
-        
-        canvas1 = np.array(canvas_conflicting_labels, dtype=bool)
-        canvas2 = canvas.astype(bool)
-        canvas_intersect = np.logical_and(canvas1, canvas2)
-        idx_intersect = np.where(canvas_intersect == True)
-        S[idx_intersect] = class_id
-        #S[idx_intersect] = class_id * 80  # test
-    
-    #ic.img_np_to_file(S, 'static/'+'dummy1'+'/superpixel_seeds_conflict'+''+'.png')
-    
-    # num_superpixel and preSeg
-    idx_traces = np.where( S > 0 )
-    num_superpixel = len(idx_traces[0])
-    preSeg = np.copy(S).flatten()
-    S = S.flatten(order='F')
-    
-    return S, num_superpixel, preSeg
 
 
 def get_snic_seeds(height,width,num_superpixel):

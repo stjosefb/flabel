@@ -5,6 +5,8 @@ from skimage.draw import line  # pip install scikit-image
 
 from PIL import Image
 
+import lib_img_convert as ic
+
 
 # # BEGIN - MASK
 DICT_CLASS_COLOR = {
@@ -36,7 +38,11 @@ def drawMaskAdd(dict_class_indexes, mask_img):
         ht,wd,_ = mask_img.shape
         
         for _class, indexes in dict_class_indexes.items():
+            #if _class == 3:
+            #print(indexes)
             mask_img[indexes] = DICT_CLASS_COLOR[_class]
+        
+        #ic.img_np_to_file(mask_img, 'static/'+'dummy1'+'/superpixel_conflict'+''+'.png')
         
         return mask_img
     except Exception as e:
