@@ -19,33 +19,61 @@ import time
 
 def create_superpixel(url, m, in_traces, ID, init_only=False):
     try:
+        # variables
         ts0 = time.time()
         is_test = True
     
-        #print('create_superpixel')
+        # file name
+        np_save_file_init = 'static/'+'dummy1'+'/'+ID+'-init.npz'
+        np_save_file_process = 'static/'+'dummy1'+'/'+ID+'-process.npz'
+        pickle_save_file_init = 'static/'+'dummy1'+'/'+ID+'-init.pkl'        
+        pickle_save_file_process = 'static/'+'dummy1'+'/'+ID+'-process.pkl'        
         
+        # image to process - 1
         img_byte_arr = ic.img_url_to_bytearr(url)
         #print('after img_url_to_bytearr')
-        
         if not init_only:
             img_np_orig = ic.img_bytearr_to_np(img_byte_arr)
+            ht, wd, _ = img_np_orig.shape
         
+        if not init_only:            
+            # TRACES
+            traces, sum_traces = get_traces(in_traces, ht, wd) 
+            # check traces difference                           
+            if os.path.isfile(np_save_file_process):
+                
+                npzfile_process = np.load(np_save_file_process)
+                mask_img_prev = npzfile_process['mask_img']
+                sum_traces_prev = npzfile_process['sum_traces']
+                sum_traces_diff = np.subtract(sum_traces_prev, sum_traces)
+                count_nonzero_sum_traces_diff = np.count_nonzero(sum_traces_diff)
+                #print(count_nonzero_sum_traces_diff)
+                if count_nonzero_sum_traces_diff == 0:
+                    img_pil_mask = ic.img_np_to_pil(mask_img_prev)
+                    mask_base64 = ic.img_pil_to_base64(img_pil_mask)                
+                    ts1 = time.time()
+                    time_diff = ts1 - ts0
+                    print(time_diff)
+                    return mask_base64, mask_base64, mask_base64, mask_base64, mask_base64, time_diff
+    
+        #print('create_superpixel')
+
+        # image to process - 2
         img_np = ic.img_bytearr_to_np(img_byte_arr)
         #print(img_np)
         #print(img_np.shape)
         
         # SUPERPIXEL
         is_save = True
-        npsavefile = 'static/'+'dummy1'+'/'+ID+'.npz'
-        picklesavefile = 'static/'+'dummy1'+'/'+ID+'.pkl'        
-        if os.path.isfile(npsavefile):
+        if os.path.isfile(np_save_file_init):
+        #if False:
             is_save = False
             # restore from file
             # restore numpy: labels
-            npzfile = np.load(npsavefile)
+            npzfile = np.load(np_save_file_init)
             labels = npzfile['labels']
             # restore others: numlabels, dict_label_pos, dict_label_color, adjacent_adaptels
-            with open(picklesavefile, 'rb') as f:  # Python 3: open(..., 'rb')
+            with open(pickle_save_file_init, 'rb') as f:  # Python 3: open(..., 'rb')
                 dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels = pickle.load(f)
             if is_test:
                 if not dict_label_pos:
@@ -75,15 +103,16 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             dict_label_color = su.create_dict_label_color(dict_label_pixels, labimg)
             # graph of labels
             adjacent_adaptels = su.get_adjacent_adaptels(labels,numlabels)
-            
+
+        #if False:         
         if is_save:
             # save
             # save numpy: labels
-            np.savez(npsavefile, labels=labels)
+            np.savez(np_save_file_init, labels=labels)
             # save others: numlabels, dict_label_pos, dict_label_color, adjacent_adaptels
-            with open(picklesavefile, 'wb') as f:  # Python 3: open(..., 'wb')
+            with open(pickle_save_file_init, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump([dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels], f)
-        
+                 
         if not init_only:
             # TRACES
             # draw foreground traces
@@ -96,8 +125,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             #bg_traces = su.draw_trace_line(bg_traces, (500,500), (10,400))
             # draw traces
             #traces = [bg_traces, fg_traces]
-            traces = get_traces(in_traces, labels)
+            #traces, sum_traces = get_traces(in_traces, labels)
             #print(traces)
+            # test draw sum_traces
+            #ic.img_np_to_file(sum_traces * 80, 'static/'+'dummy1'+'/sum_traces'+''+'.png')
             
             # LABEL CLASSIFICATION
             # classify selected labels
@@ -125,6 +156,20 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
                 #mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
             
+            is_save_2 = True              
+            #if is_save:
+            if is_save_2:
+                #pass
+                #for trace in traces:
+                    #pickle.dump([traces], f)
+                
+                # save
+                # save numpy: mask_img
+                np.savez(np_save_file_process, mask_img=mask_img, sum_traces=sum_traces)
+                # save others: traces
+                #with open(pickle_save_file_process, 'wb') as f:  # Python 3: open(..., 'wb')
+                #    pass
+
             # TEST        
             if is_test:
                 # TEST SHOW BOUNDARIES
@@ -443,16 +488,19 @@ def get_snic_seeds(height,width,num_superpixel):
     return S, num_superpixel_actual       
     
     
-def get_traces(in_traces,labels):   
+def get_traces(in_traces,height,width):   
     traces = []
     dict_canvas = dict()
+
+    #ht,wd = labels.shape
+    sum_traces = np.zeros((height, width), dtype=np.float64)
 
     for trace in in_traces:
         trace_elmts = trace.split(',')
         class_id = trace_elmts[-1]
         if trace_elmts[-1] not in dict_canvas:
             # create if not exist
-            canvas = su.create_traces_canvas(int(class_id), labels)
+            canvas = su.create_traces_canvas(int(class_id), height, width)
             dict_canvas[class_id] = canvas
         #if (trace_elmts[0]==trace_elmts[-4]) and (trace_elmts[1]==trace_elmts[-3]):
             # polygon
@@ -467,6 +515,7 @@ def get_traces(in_traces,labels):
             c1 = int(trace_elmts[i+4])
             r1 = int(trace_elmts[i+5])            
             dict_canvas[class_id] = su.draw_trace_line(dict_canvas[class_id], (r0,c0), (r1,c1))
+            sum_traces = su.draw_trace_line(sum_traces, (r0,c0), (r1,c1), class_id)
         
     # draw foreground traces
     #fg_traces = su.create_traces_canvas(1, labels)
@@ -482,7 +531,7 @@ def get_traces(in_traces,labels):
     for canvas in dict_canvas:
         traces.append(dict_canvas[canvas]);
 
-    return traces
+    return traces, sum_traces
     
     
 def get_dict_centroid_center(S,height,width):

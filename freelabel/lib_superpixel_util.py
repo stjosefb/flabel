@@ -104,21 +104,26 @@ def select_adaptels(trace, labels):
         
         
 # # BEGIN - TRACES    
-def create_traces_canvas(class_id, labels):
-    ht,wd = labels.shape
+def create_traces_canvas(class_id, height, width):
+    #ht,wd = labels.shape
     dict_canvas = {'class_id': class_id}
-    dict_canvas['canvas'] = np.zeros((ht, wd), dtype=np.float64)
+    dict_canvas['canvas'] = np.zeros((height, width), dtype=np.float64)
 
     return dict_canvas
 
     
-def draw_trace_line(fg_traces, begin, end):
+def draw_trace_line(fg_traces, begin, end, class_id=None):
     try:
         y1,x1 = begin
         y2,x2 = end
         #print(y1, x1, y2, x2)
         rr, cc = line(y1, x1, y2, x2)
-        fg_traces['canvas'][rr, cc] = 1
+        if class_id is None:
+            class_id = 1
+        if type(fg_traces) is dict:
+            fg_traces['canvas'][rr, cc] = class_id
+        else:
+            fg_traces[rr, cc] = class_id
         
         return fg_traces
     except Exception as e:
