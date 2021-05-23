@@ -562,7 +562,7 @@ def init_refine_by_superpixel(request):
         
         
         time_0 = time.time()
-        sp.create_superpixel(url, m, traces, ID)
+        sp.create_superpixel(url, m, traces, ID, init_only=True)
         time_1 = time.time()
         time_diff = time_1-time_0
         
