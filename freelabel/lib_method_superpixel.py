@@ -138,7 +138,17 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             dict_adaptel_classes_init = su.find_adaptel_class(traces, labels, dict_label_pixels)  
             # grow selection
             dict_adaptel_classes_temp, conflicting_labels, need_refinement_labels = lib_grow_selection.grow_selection(dict_adaptel_classes_init, adjacent_adaptels, dict_label_color)
+            # filter conflicting labels
+            conflicting_labels_with_new_trace = []
+            if count_nonzero_sum_traces_diff > 0:
+                labels_with_new_trace = get_labels_with_new_trace(sum_traces_diff, labels)
+                #print(labels_with_new_trace)
+                for conflicting_label in conflicting_labels:
+                    if conflicting_label in labels_with_new_trace:
+                        conflicting_labels_with_new_trace.append(conflicting_label)
+                #conflicting_labels = conflicting_labels_filtered
             #print(need_refinement_labels)
+            #print(conflicting_labels_with_new_trace)
             #print(conflicting_labels)
             # get image mask	
             mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
@@ -146,7 +156,7 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             # RESOLVE CONFLICT
             if len(conflicting_labels) > 0:
                 # resolve conflict: get superpixel
-                dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces)
+                dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces, conflicting_labels_with_new_trace, ID)
                 #print(dict_class_indexes)
                 # draw image mask for conflicting centroids
                 mask_img = su.drawMaskAdd(dict_class_indexes, mask_img)
@@ -155,9 +165,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             #Image.fromarray(maskimg).save(mask_rslt)
             
             # REFINE
-            if len(need_refinement_labels) > 0:
+            #if len(need_refinement_labels) > 0:
+            if False:
                 dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
-                #mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
+                mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
             
             # TEST        
             if is_test:
@@ -348,39 +359,106 @@ def get_superpixel_snic_for_refinement(img_np, m, need_refinement_labels, dict_l
         print(exc_type, fname, exc_tb.tb_lineno)     
 
     
-def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, dict_label_pixels, traces):
+def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, dict_label_pixels, traces, conflicting_labels_with_new_trace, ID):
     try:
         dict_class_indexes = {}
         
         is_per_label = True
         if is_per_label:
+            # file
+            #np_save_file_conflict = 'static/'+'dummy1'+'/'+ID+'-conflict.npz'
+            pickle_save_file_conflict = 'static/'+'dummy1'+'/'+ID+'-conflict.pkl' 
+            #new_save_indexes = []
+            #new_save_labels = []  
+            
+            # restore          
+            #save_indexes = np.asarray([])
+            save_labels = {}
+            if os.path.isfile(pickle_save_file_conflict):
+                # npz
+                #npzfile = np.load(np_save_file_conflict)
+                #save_indexes = npzfile['save_indexes']
+                # pickle
+                with open(pickle_save_file_conflict, 'rb') as f:  # Python 3: open(..., 'rb')
+                    save_labels = pickle.load(f)
+                    
+            #print(save_labels)
+
+            # new traces
+            dict_save_label = {}
             for idx, conflicting_label in enumerate(conflicting_labels):
-                dict_class_indexes_tmp = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, [conflicting_label], dict_label_pixels, traces)
-                #print(dict_class_indexes_tmp)                
-                #print('')
-                #dict_class_indexes = dict_class_indexes_tmp
-                #if idx == 1:
-                #    break
-                #break
-                for key in dict_class_indexes_tmp:
-                    #if idx == 2:
-                    #if idx in [1]:
-                    if True:
-                        #print(type(dict_class_indexes_tmp[key][0]))
-                        #print(idx, dict_class_indexes_tmp[key][0].shape)
-                        if key not in dict_class_indexes:
-                            #print(idx, key, 'if')
-                            dict_class_indexes[key] = dict_class_indexes_tmp[key]
-                        else:
-                            #print(idx, key, 'else')
-                            tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
-                            tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
-                            dict_class_indexes[key] = (tup_y, tup_x)
-                            #dict_class_indexes[key][0].append(dict_class_indexes_tmp[key][0])
-                            #dict_class_indexes[key][1].append(dict_class_indexes_tmp[key][1])
-                        #break
-            #print(dict_class_indexes[1][0].shape)
-            #print(dict_class_indexes[2][0].shape)
+                dict_save_label[str(conflicting_label)] = {}
+                if conflicting_label in conflicting_labels_with_new_trace:
+                #if True:
+                    # RGR
+                    #print('rgr')
+                    
+                    
+                    
+                    dict_class_indexes_tmp = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, [conflicting_label], dict_label_pixels, traces)
+                    #print(dict_class_indexes_tmp)                
+                    #print('')
+                    #dict_class_indexes = dict_class_indexes_tmp
+                    #if idx == 1:
+                    #    break
+                    #break
+                    for key in dict_class_indexes_tmp:
+                        #if idx == 2:
+                        #if idx in [1]:
+                        if True:
+                            #print(type(dict_class_indexes_tmp[key][0]))
+                            #print(idx, dict_class_indexes_tmp[key][0].shape)
+                            if key not in dict_class_indexes:
+                                #print(idx, key, 'if')
+                                dict_class_indexes[key] = dict_class_indexes_tmp[key]
+                            else:
+                                #print(idx, key, 'else')
+                                tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
+                                tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
+                                #dict_class_indexes[key] = np.asarray([tup_y, tup_x])
+                                dict_class_indexes[key] = (tup_y, tup_x)
+                                #dict_class_indexes[key][0].append(dict_class_indexes_tmp[key][0])
+                                #dict_class_indexes[key][1].append(dict_class_indexes_tmp[key][1])
+                            #break
+                            #if conflicting_label in save_labels:
+                                #pass
+                            #else:
+                            #new_save_labels.append(str(conflicting_label)+'-'+str(key))
+                    
+                            dict_save_label[str(conflicting_label)][key] = (dict_class_indexes_tmp[key][0].tolist(), dict_class_indexes_tmp[key][1].tolist())
+                            
+
+                            #new_save_indexes.append(np.asarray([tup_y, tup_x]))
+                #print(dict_class_indexes[1][0].shape)
+                #print(dict_class_indexes[2][0].shape)
+                else:
+                    #print('restore')
+                    # look from saved file
+                    #pass
+                    #idx = save_labels.index(str(conflicting_label)+'-'+str(key))
+                    if str(conflicting_label) in save_labels:
+                        for key in save_labels[str(conflicting_label)]:
+                            if key not in dict_class_indexes:
+                                dict_class_indexes[key] = (np.asarray(save_labels[str(conflicting_label)][key][0]), np.asarray(save_labels[str(conflicting_label)][key][1]))
+                            else:
+                                tup_y = np.append(dict_class_indexes[key][0], np.asarray(save_labels[str(conflicting_label)][key][0]))
+                                tup_x = np.append(dict_class_indexes[key][1], np.asarray(save_labels[str(conflicting_label)][key][1]))
+                                dict_class_indexes[key] = (tup_y, tup_x)                        
+                            dict_save_label[str(conflicting_label)][key] = (np.asarray(save_labels[str(conflicting_label)][key][0]), np.asarray(save_labels[str(conflicting_label)][key][1]))
+            
+             
+            # save
+            #print(dict_save_label)
+            #np.savez(np_save_file_conflict, save_indexes=np.asarray(new_save_indexes))
+            with open(pickle_save_file_conflict, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump(dict_save_label, f)            
+
+                        
+            # old traces
+            #for conflicting_label in conflicting_labels:
+                #if conflicting_label not in conflicting_labels_with_new_trace:
+
+            
         else:
             dict_class_indexes = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, conflicting_labels, dict_label_pixels, traces)    
         
@@ -489,6 +567,15 @@ def get_snic_seeds(height,width,num_superpixel):
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)   
     return S, num_superpixel_actual       
+    
+    
+def get_labels_with_new_trace(sum_traces_diff, labels):
+    intersect = sum_traces_diff * labels
+    labels_with_new_trace = np.unique(np.extract(intersect > 0, intersect))
+    
+    #print(labels_with_new_trace)
+    
+    return labels_with_new_trace
     
     
 def get_traces(in_traces,height,width):   
