@@ -41,20 +41,23 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             traces, sum_traces = get_traces(in_traces, ht, wd) 
             # check traces difference                           
             if os.path.isfile(np_save_file_process):
+                with open(pickle_save_file_process, 'rb') as f:  # Python 3: open(..., 'rb')
+                    img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel = pickle.load(f)
+            
+                npzfile_process = np.load(np_save_file_process)                
                 
-                npzfile_process = np.load(np_save_file_process)
-                mask_img_prev = npzfile_process['mask_img']
                 sum_traces_prev = npzfile_process['sum_traces']
+           
                 sum_traces_diff = np.subtract(sum_traces_prev, sum_traces)
                 count_nonzero_sum_traces_diff = np.count_nonzero(sum_traces_diff)
                 #print(count_nonzero_sum_traces_diff)
                 if count_nonzero_sum_traces_diff == 0:
-                    img_pil_mask = ic.img_np_to_pil(mask_img_prev)
-                    mask_base64 = ic.img_pil_to_base64(img_pil_mask)                
+                    #img_pil_mask = ic.img_np_to_pil(mask_img_prev)
+                    #mask_base64 = ic.img_pil_to_base64(img_pil_mask)                
                     ts1 = time.time()
                     time_diff = ts1 - ts0
-                    print(time_diff)
-                    return mask_base64, mask_base64, mask_base64, mask_base64, mask_base64, time_diff
+                    #print(time_diff)
+                    return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel, time_diff
     
         #print('create_superpixel')
 
@@ -156,20 +159,6 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
                 #mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
             
-            is_save_2 = True              
-            #if is_save:
-            if is_save_2:
-                #pass
-                #for trace in traces:
-                    #pickle.dump([traces], f)
-                
-                # save
-                # save numpy: mask_img
-                np.savez(np_save_file_process, mask_img=mask_img, sum_traces=sum_traces)
-                # save others: traces
-                #with open(pickle_save_file_process, 'wb') as f:  # Python 3: open(..., 'wb')
-                #    pass
-
             # TEST        
             if is_test:
                 # TEST SHOW BOUNDARIES
@@ -200,6 +189,20 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 img_base64_superpixel = ic.img_pil_to_base64(img_pil_superpixel)
             else:
                 img_base64_boundaries = img_base64_labels = img_base64_superpixel = mask_base64 
+      
+            is_save_2 = True              
+            #if is_save:
+            if is_save_2:
+                #pass
+                #for trace in traces:
+                    #pickle.dump([traces], f)
+                
+                # save
+                # save numpy: mask_img
+                np.savez(np_save_file_process, sum_traces=sum_traces)
+                # save others: traces
+                with open(pickle_save_file_process, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump([img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel], f)
       
             ts1 = time.time()
             time_diff = ts1 - ts0
