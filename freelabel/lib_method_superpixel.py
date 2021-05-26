@@ -107,6 +107,9 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             # graph of labels
             adjacent_adaptels = su.get_adjacent_adaptels(labels,numlabels)
 
+        ts10 = time.time() 
+        print(ts10-ts0, 'init')
+        
         #if False:         
         if is_save:
             # save
@@ -115,7 +118,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             # save others: numlabels, dict_label_pos, dict_label_color, adjacent_adaptels
             with open(pickle_save_file_init, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump([dict_label_pixels, numlabels, dict_label_pos, dict_label_color, adjacent_adaptels], f)
-                 
+        
+        ts11 = time.time() 
+        print(ts11-ts10, 'save1')
+        
         if not init_only:
             # TRACES
             # draw foreground traces
@@ -153,6 +159,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             # get image mask	
             mask_img = su.drawMask(labels, dict_adaptel_classes_temp, dict_label_pixels)	
             #print(conflicting_labels)
+
+            ts12 = time.time() 
+            print(ts12-ts11, 'label classification')
+
             # RESOLVE CONFLICT
             if len(conflicting_labels) > 0:
                 # resolve conflict: get superpixel
@@ -169,6 +179,9 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             if False:
                 dict_class_indexes_refine = get_superpixel_snic_for_refinement(img_np_orig, m, need_refinement_labels, dict_label_pixels, traces)
                 mask_img = su.drawMaskAdd(dict_class_indexes_refine, mask_img)
+
+            ts13 = time.time() 
+            print(ts13-ts12, 'resolve')
             
             # TEST        
             if is_test:
@@ -181,6 +194,9 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 #print(dict_label_color)
                 #print(dict_label_color_rgb)
                 img_np_sp_color = ds.draw_superpixels(img_np,labels,dict_label_color_rgb)
+
+                ts14 = time.time() 
+                print(ts14-ts13, 'test')
             
             # RESULT
             img_pil = ic.img_np_to_pil(img_np_orig)
@@ -201,6 +217,7 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             else:
                 img_base64_boundaries = img_base64_labels = img_base64_superpixel = mask_base64 
       
+            ts15 = time.time() 
             is_save_2 = True              
             #if is_save:
             if is_save_2:
@@ -214,7 +231,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 # save others: traces
                 with open(pickle_save_file_process, 'wb') as f:  # Python 3: open(..., 'wb')
                     pickle.dump([img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel], f)
-      
+                
+                ts16 = time.time() 
+                print(ts16-ts15, 'save2')
+                
             ts1 = time.time()
             time_diff = ts1 - ts0
             return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel, time_diff
