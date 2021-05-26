@@ -362,6 +362,7 @@ def get_superpixel_snic_for_refinement(img_np, m, need_refinement_labels, dict_l
 def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, dict_label_pixels, traces, conflicting_labels_with_new_trace, ID):
     try:
         dict_class_indexes = {}
+        dict_class_indexes_as_list = {}
         
         is_per_label = True
         if is_per_label:
@@ -408,15 +409,22 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
                         if True:
                             #print(type(dict_class_indexes_tmp[key][0]))
                             #print(idx, dict_class_indexes_tmp[key][0].shape)
-                            if key not in dict_class_indexes:
+                            #if key not in dict_class_indexes:
+                            if key not in dict_class_indexes_as_list:
                                 #print(idx, key, 'if')
-                                dict_class_indexes[key] = dict_class_indexes_tmp[key]
+                                #dict_class_indexes[key] = dict_class_indexes_tmp[key]
+                                dict_class_indexes_as_list[key] = (dict_class_indexes_tmp[key][0].tolist(),dict_class_indexes_tmp[key][1].tolist())
+                                #dict_class_indexes_as_list[key][0].extend([999,9999])
+                                #print(dict_class_indexes_as_list[key][0])
                             else:
                                 #print(idx, key, 'else')
-                                tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
-                                tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
+                                #tup_y = np.append(dict_class_indexes[key][0], dict_class_indexes_tmp[key][0])
+                                #tup_x = np.append(dict_class_indexes[key][1], dict_class_indexes_tmp[key][1])
+                                dict_class_indexes_as_list[key][0].extend(dict_class_indexes_tmp[key][0].tolist())
+                                dict_class_indexes_as_list[key][1].extend(dict_class_indexes_tmp[key][1].tolist())
                                 #dict_class_indexes[key] = np.asarray([tup_y, tup_x])
-                                dict_class_indexes[key] = (tup_y, tup_x)
+                                #dict_class_indexes[key] = (tup_y, tup_x)
+                                #dict_class_indexes_as_list[key] = (tup_y, tup_x)
                                 #dict_class_indexes[key][0].append(dict_class_indexes_tmp[key][0])
                                 #dict_class_indexes[key][1].append(dict_class_indexes_tmp[key][1])
                             #break
@@ -438,13 +446,18 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
                     #idx = save_labels.index(str(conflicting_label)+'-'+str(key))
                     if str(conflicting_label) in save_labels:
                         for key in save_labels[str(conflicting_label)]:
-                            if key not in dict_class_indexes:
-                                dict_class_indexes[key] = (np.asarray(save_labels[str(conflicting_label)][key][0]), np.asarray(save_labels[str(conflicting_label)][key][1]))
+                            #if key not in dict_class_indexes:
+                            if key not in dict_class_indexes_as_list:
+                                #dict_class_indexes[key] = (np.asarray(save_labels[str(conflicting_label)][key][0]), np.asarray(save_labels[str(conflicting_label)][key][1]))
+                                dict_class_indexes_as_list[key] = save_labels[str(conflicting_label)][key]
                             else:
-                                tup_y = np.append(dict_class_indexes[key][0], np.asarray(save_labels[str(conflicting_label)][key][0]))
-                                tup_x = np.append(dict_class_indexes[key][1], np.asarray(save_labels[str(conflicting_label)][key][1]))
-                                dict_class_indexes[key] = (tup_y, tup_x)                        
-                            dict_save_label[str(conflicting_label)][key] = (np.asarray(save_labels[str(conflicting_label)][key][0]), np.asarray(save_labels[str(conflicting_label)][key][1]))
+                                #tup_y = np.append(dict_class_indexes[key][0], np.asarray(save_labels[str(conflicting_label)][key][0]))
+                                #tup_x = np.append(dict_class_indexes[key][1], np.asarray(save_labels[str(conflicting_label)][key][1]))
+                                #dict_class_indexes[key] = (tup_y, tup_x)                        
+                                dict_class_indexes_as_list[key][0].extend(save_labels[str(conflicting_label)][key][0])
+                                dict_class_indexes_as_list[key][1].extend(save_labels[str(conflicting_label)][key][1])
+
+                            dict_save_label[str(conflicting_label)][key] = (save_labels[str(conflicting_label)][key][0], save_labels[str(conflicting_label)][key][1])
             
              
             # save
@@ -458,7 +471,8 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
             #for conflicting_label in conflicting_labels:
                 #if conflicting_label not in conflicting_labels_with_new_trace:
 
-            
+            for key in dict_class_indexes_as_list:
+                dict_class_indexes[key] = dict_class_indexes_as_list[key]
         else:
             dict_class_indexes = lib_resolve_conflict.get_resolved_dict_class_indexes(img_np, m, conflicting_labels, dict_label_pixels, traces)    
         
