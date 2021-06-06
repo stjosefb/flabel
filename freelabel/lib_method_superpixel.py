@@ -21,7 +21,7 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
     try:
         # variables
         ts0 = time.time()
-        is_test = True
+        is_test = False
     
         # file name
         np_save_file_init = 'static/'+'dummy1'+'/'+ID+'-init.npz'
@@ -58,7 +58,10 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                     time_diff = ts1 - ts0
                     #print(time_diff)
                     return img_base64, mask_base64, img_base64_boundaries, img_base64_labels, img_base64_superpixel, time_diff
-    
+            else:
+                count_nonzero_sum_traces_diff = -1
+                sum_traces_diff = None
+                
         #print('create_superpixel')
 
         # image to process - 2
@@ -152,6 +155,8 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
                 for conflicting_label in conflicting_labels:
                     if conflicting_label in labels_with_new_trace:
                         conflicting_labels_with_new_trace.append(conflicting_label)
+            elif count_nonzero_sum_traces_diff < 0:
+                conflicting_labels_with_new_trace = []
                 #conflicting_labels = conflicting_labels_filtered
             #print(need_refinement_labels)
             #print(conflicting_labels_with_new_trace)
@@ -165,6 +170,7 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
 
             # RESOLVE CONFLICT
             if len(conflicting_labels) > 0:
+                print('conflict')
                 # resolve conflict: get superpixel
                 dict_class_indexes = get_superpixel_snic_for_conflicting_labels(img_np_orig, m, conflicting_labels, dict_label_pixels, traces, conflicting_labels_with_new_trace, ID)
                 #print(dict_class_indexes)
@@ -185,9 +191,11 @@ def create_superpixel(url, m, in_traces, ID, init_only=False):
             
             # TEST        
             if is_test:
-                # TEST SHOW BOUNDARIES
-                img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
-                img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+                # TEST SHOW BOUNDARIES ETC
+                #img_np_with_boundaries = ds.draw_boundaries(img_np,labels)
+                img_np_with_boundaries = img_np
+                #img_np_labels = ds.drawBoundariesOnly(img_np,labels,numlabels,dict_label_pos,True)
+                img_np_labels = img_np
                 # test superpixels color
                 dict_label_color_rgb = ds.dictLabelLabToRgb(dict_label_color)
                 #print(dict_label_color)
@@ -409,8 +417,8 @@ def get_superpixel_snic_for_conflicting_labels(img_np, m, conflicting_labels, di
             dict_save_label = {}
             for idx, conflicting_label in enumerate(conflicting_labels):
                 dict_save_label[str(conflicting_label)] = {}
-                if conflicting_label in conflicting_labels_with_new_trace:
-                #if True:
+                #if conflicting_label in conflicting_labels_with_new_trace:
+                if True:
                     # RGR
                     #print('rgr')
                     

@@ -119,7 +119,8 @@ def grow_selection(dict_adaptel_classes, adjacent_adaptels, dict_label_color):
                     source_class = list_class_info[0]['class_id']
                     #print(source_label, adjacent_label, source_class, adjacent_class)
                     if adjacent_class != source_class:
-                        need_refinement_labels.append({'label': source_label, 'class_trace': source_class, 'nearest_label': adjacent_label, 'class_candidate': adjacent_class})
+                        if False:
+                            need_refinement_labels.append({'label': source_label, 'class_trace': source_class, 'nearest_label': adjacent_label, 'class_candidate': adjacent_class})
                         #print(source_label, adjacent_label, source_class, adjacent_class)
         """
         for label, list_class_info in dict_adaptel_classes.items():
